@@ -1,0 +1,27 @@
+# IDE
+.settings/
+.classpath
+.project
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.code-workspace
+
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Log files
+*.log
+
+# Local files
+.DS_Store
+tmp
+*.swp
+dist
