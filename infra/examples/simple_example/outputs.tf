@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-variable "org_id" {
-  description = "The numeric organization id"
+output "errors_topic_name" {
+  description = "The name of the error topic"
+  value       = module.simple.errors_topic_name
 }
 
-variable "folder_id" {
-  description = "The folder to deploy in"
+output "metrics_topic_name" {
+  description = "The name of the metric topic"
+  value       = module.simple.metrics_topic_name
 }
 
-variable "billing_account" {
-  description = "The billing account id associated with the project, e.g. XXXXXX-YYYYYY-ZZZZZZ"
+output "event_topic_name" {
+  description = "The name of the event topic"
+  value       = module.simple.event_topic_name
 }

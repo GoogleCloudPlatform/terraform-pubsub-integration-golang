@@ -41,20 +41,20 @@ resource "google_compute_network" "primary" {
   auto_create_subnetworks = true
 }
 
-resource "google_pubsub_topic" "events" {
+resource "google_pubsub_topic" "event" {
   depends_on = [
     module.project_services,
   ]
 
-  name = "EventsTopic"
+  name = "EventTopic"
   schema_settings {
-    schema   = "projects/${data.google_project.current.project_id}/schemas/${google_pubsub_schema.events.name}"
+    schema   = "projects/${data.google_project.current.project_id}/schemas/${google_pubsub_schema.event.name}"
     encoding = "JSON"
   }
   labels = var.labels
 }
 
-resource "google_pubsub_schema" "events" {
+resource "google_pubsub_schema" "event" {
   depends_on = [
     module.project_services,
   ]
@@ -64,13 +64,13 @@ resource "google_pubsub_schema" "events" {
   definition = file("${path.module}/../config/avro/evChargeEvent.avsc")
 }
 
-resource "google_pubsub_subscription" "events" {
+resource "google_pubsub_subscription" "event" {
   depends_on = [
     google_project_iam_member.pubsub
   ]
 
   name  = "EventSubscription"
-  topic = google_pubsub_topic.events.name
+  topic = google_pubsub_topic.event.name
   dead_letter_policy {
     dead_letter_topic     = google_pubsub_topic.errors.id
     max_delivery_attempts = 5
@@ -87,7 +87,7 @@ resource "google_pubsub_topic" "errors" {
   name                       = "ErrorsTopic"
   message_retention_duration = "600s"
   schema_settings {
-    schema   = "projects/${data.google_project.current.project_id}/schemas/${google_pubsub_schema.events.name}"
+    schema   = "projects/${data.google_project.current.project_id}/schemas/${google_pubsub_schema.event.name}"
     encoding = "JSON"
   }
   labels = var.labels
