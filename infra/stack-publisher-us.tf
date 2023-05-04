@@ -89,7 +89,7 @@ module "us_west1_publisher_helm" {
       },
       {
         name  = "config_maps.event_topic"
-        value = google_pubsub_topic.events.id
+        value = google_pubsub_topic.event.id
       },
     ]
   )

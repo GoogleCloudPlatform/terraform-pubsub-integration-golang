@@ -90,7 +90,7 @@ module "us_west1_subscriber_helm" {
       },
       {
         name  = "config_maps.event_subscription"
-        value = google_pubsub_subscription.events.id
+        value = google_pubsub_subscription.event.id
       },
       {
         name  = "config_maps.metrics_topic"
