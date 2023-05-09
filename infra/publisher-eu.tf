@@ -23,12 +23,12 @@ module "europe_north1_publisher_cluster" {
   ]
   source = "./modules/kubernetes"
 
-  cluster_name            = "europe-north1-publisher"
+  cluster_name            = "europe-north1-publisher-golang"
   region                  = "europe-north1"
   zones                   = ["europe-north1-a"]
   xwiki_network_self_link = google_compute_network.primary.self_link
-  project_id              = data.google_project.current.project_id
-  gcp_service_account_id  = "europe-north1-publisher"
+  project_id              = data.google_project.project.project_id
+  gcp_service_account_id  = "europe-north1-publisher-golang"
   gcp_service_account_iam_roles = [
     "roles/pubsub.publisher",
   ]
@@ -37,18 +37,8 @@ module "europe_north1_publisher_cluster" {
   labels                   = var.labels
 }
 
-provider "helm" {
-  alias = "europe_north1_publisher_helm"
-  kubernetes {
-    host                   = "https://${module.europe_north1_publisher_cluster.control_plane.endpoint}"
-    token                  = data.google_client_config.default.access_token
-    cluster_ca_certificate = base64decode(module.europe_north1_publisher_cluster.control_plane.master_auth[0].cluster_ca_certificate, )
-    client_certificate     = base64decode(module.europe_north1_publisher_cluster.control_plane.master_auth[0].client_certificate)
-    client_key             = base64decode(module.europe_north1_publisher_cluster.control_plane.master_auth[0].client_key)
-  }
-}
 
-module "europe_north1_base_helm" {
+module "europe_north1_publisher_base_helm" {
   depends_on = [
     module.europe_north1_publisher_cluster,
   ]
@@ -77,7 +67,7 @@ module "europe_north1_publisher_helm" {
     [
       {
         name  = "project_id"
-        value = data.google_project.current.project_id
+        value = data.google_project.project.project_id
       },
       {
         name  = "region"

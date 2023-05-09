@@ -57,4 +57,4 @@ spec:
           image: '{{ .Values.image }}'
           resources:
             requests:
-              cpu: "1300m"
+              cpu: "1000m"

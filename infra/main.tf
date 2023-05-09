@@ -17,7 +17,7 @@ module "project_services" {
   ]
 }
 
-data "google_project" "current" {
+data "google_project" "project" {
   depends_on = [
     module.project_services
   ]
@@ -36,8 +36,8 @@ resource "google_compute_network" "primary" {
     module.project_services
   ]
 
-  project                 = data.google_project.current.project_id
-  name                    = "primary"
+  project                 = data.google_project.project.project_id
+  name                    = "pubsub-network-golang"
   auto_create_subnetworks = true
 }
 
@@ -46,9 +46,9 @@ resource "google_pubsub_topic" "event" {
     module.project_services,
   ]
 
-  name = "EventTopic"
+  name = "event-topic-pubsub-integration-golang"
   schema_settings {
-    schema   = "projects/${data.google_project.current.project_id}/schemas/${google_pubsub_schema.event.name}"
+    schema   = "projects/${data.google_project.project.project_id}/schemas/${google_pubsub_schema.event.name}"
     encoding = "JSON"
   }
   labels = var.labels
@@ -59,9 +59,9 @@ resource "google_pubsub_schema" "event" {
     module.project_services,
   ]
 
-  name       = "evChargeEvent"
+  name       = "event-pubsub-integration-golang"
   type       = "AVRO"
-  definition = file("${path.module}/../config/avro/evChargeEvent.avsc")
+  definition = file("${path.module}/config/avro/Event.avsc")
 }
 
 resource "google_pubsub_subscription" "event" {
@@ -69,7 +69,7 @@ resource "google_pubsub_subscription" "event" {
     google_project_iam_member.pubsub
   ]
 
-  name  = "EventSubscription"
+  name  = "event-subscription-pubsub-integration-golang"
   topic = google_pubsub_topic.event.name
   dead_letter_policy {
     dead_letter_topic     = google_pubsub_topic.errors.id
@@ -84,10 +84,10 @@ resource "google_pubsub_topic" "errors" {
     google_project_iam_member.pubsub
   ]
 
-  name                       = "ErrorsTopic"
+  name                       = "errors-topic-pubsub-integration-golang"
   message_retention_duration = "600s"
   schema_settings {
-    schema   = "projects/${data.google_project.current.project_id}/schemas/${google_pubsub_schema.event.name}"
+    schema   = "projects/${data.google_project.project.project_id}/schemas/${google_pubsub_schema.event.name}"
     encoding = "JSON"
   }
   labels = var.labels
@@ -98,9 +98,9 @@ resource "google_pubsub_topic" "metrics" {
     module.project_services,
   ]
 
-  name = "MetricsTopic"
+  name = "metrics-topic-pubsub-integration-golang"
   schema_settings {
-    schema   = "projects/${data.google_project.current.project_id}/schemas/${google_pubsub_schema.metrics.name}"
+    schema   = "projects/${data.google_project.project.project_id}/schemas/${google_pubsub_schema.metrics.name}"
     encoding = "JSON"
   }
   labels = var.labels
@@ -111,9 +111,9 @@ resource "google_pubsub_schema" "metrics" {
     module.project_services,
   ]
 
-  name       = "evChargeMetric"
+  name       = "metrics-pubsub-integration-golang"
   type       = "AVRO"
-  definition = file("${path.module}/../config/avro/evChargeMetricComplete.avsc")
+  definition = file("${path.module}/config/avro/MetricsAck.avsc") //TODO
 }
 
 resource "google_pubsub_subscription" "metrics" {
@@ -121,10 +121,10 @@ resource "google_pubsub_subscription" "metrics" {
     google_project_iam_member.pubsub
   ]
 
-  name  = "MetricsSubscription"
+  name  = "metrics-subscription-pubsub-integration-golang"
   topic = google_pubsub_topic.metrics.name
   bigquery_config {
-    table            = "${data.google_project.current.project_id}.${module.bigquery.dataset_id}.${module.bigquery.table_id}"
+    table            = "${data.google_project.project.project_id}.${module.bigquery.dataset_id}.${module.bigquery.table_id}"
     use_topic_schema = true
   }
   labels = var.labels
@@ -136,9 +136,9 @@ module "bigquery" {
   ]
   source = "./modules/bigquery"
 
-  dataset_id = "ev_charging"
+  dataset_id = "ev_charging_golang"
   table_id   = "charging_sessions"
-  schema     = file("${path.module}/../config/avro/bigquery/evChargeMetricComplete.json")
+  schema     = file("${path.module}/config/avro/bigquery/MetricsComplete.json")
   labels     = var.labels
 }
 
@@ -154,7 +154,7 @@ resource "google_project_iam_member" "pubsub" {
     "roles/pubsub.publisher",
   ])
 
-  project = data.google_project.current.project_id
+  project = data.google_project.project.project_id
   role    = each.key
-  member  = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
+  member  = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
 }
