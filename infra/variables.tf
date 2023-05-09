@@ -16,19 +16,19 @@ variable "region" {
 variable "subscriber_image_url" {
   description = "pubsub subscriber app image url "
   type        = string
-  default     = "asia.gcr.io/aemon-projects-dev-012/pubsub-sub:0422"
+  default     = "asia.gcr.io/aemon-projects-dev-012/pubsub-sub:0508-ack" //TODO GOLANG IMAGE
 }
 
 variable "publisher_image_url" {
   description = "pubsub publisher app image url "
   type        = string
-  default     = "asia.gcr.io/aemon-projects-dev-012/pubsub-pub:0422"
+  default     = "asia.gcr.io/aemon-projects-dev-012/pubsub-pub:0508" //TODO GOLANG IMAGE
 }
 
 variable "labels" {
   type        = map(string)
   description = "A map of key/value label pairs to assign to the resources."
   default = {
-    app = "gcp-api-integration"
+    app = "gcp-api-integration-golang"
   }
 }

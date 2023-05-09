@@ -1,6 +1,6 @@
 output "project_id" {
   description = "GCP project ID."
-  value       = data.google_project.current.project_id
+  value       = data.google_project.project.project_id
 }
 
 output "errors_topic_name" {
