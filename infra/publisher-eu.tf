@@ -23,12 +23,12 @@ module "europe_north1_publisher_cluster" {
   ]
   source = "./modules/kubernetes"
 
-  cluster_name            = "europe-north1-publisher-golang"
-  region                  = "europe-north1"
-  zones                   = ["europe-north1-a"]
-  xwiki_network_self_link = google_compute_network.primary.self_link
-  project_id              = data.google_project.project.project_id
-  gcp_service_account_id  = "europe-north1-publisher-golang"
+  cluster_name           = "europe-north1-publisher-golang"
+  region                 = "europe-north1"
+  zones                  = ["europe-north1-a"]
+  network_self_link      = google_compute_network.primary.self_link
+  project_id             = data.google_project.project.project_id
+  gcp_service_account_id = "europe-north1-publisher-golang"
   gcp_service_account_iam_roles = [
     "roles/pubsub.publisher",
   ]
@@ -39,9 +39,6 @@ module "europe_north1_publisher_cluster" {
 
 
 module "europe_north1_publisher_base_helm" {
-  depends_on = [
-    module.europe_north1_publisher_cluster,
-  ]
   source = "./modules/helm"
 
   providers = {
@@ -54,7 +51,7 @@ module "europe_north1_publisher_base_helm" {
 
 module "europe_north1_publisher_helm" {
   depends_on = [
-    module.europe_north1_publisher_cluster,
+    module.europe_north1_publisher_base_helm,
   ]
   source = "./modules/helm"
 

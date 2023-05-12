@@ -23,12 +23,12 @@ module "us_west1_publisher_cluster" {
   ]
   source = "./modules/kubernetes"
 
-  cluster_name            = "us-west1-publisher-golang"
-  region                  = "us-west1"
-  zones                   = ["us-west1-a"]
-  xwiki_network_self_link = google_compute_network.primary.self_link
-  project_id              = data.google_project.project.project_id
-  gcp_service_account_id  = "us-west1-publisher-golang"
+  cluster_name           = "us-west1-publisher-golang"
+  region                 = "us-west1"
+  zones                  = ["us-west1-a"]
+  network_self_link      = google_compute_network.primary.self_link
+  project_id             = data.google_project.project.project_id
+  gcp_service_account_id = "us-west1-publisher-golang"
   gcp_service_account_iam_roles = [
     "roles/pubsub.publisher",
   ]
@@ -38,9 +38,6 @@ module "us_west1_publisher_cluster" {
 }
 
 module "us_west1_publisher_base_helm" {
-  depends_on = [
-    module.us_west1_publisher_cluster,
-  ]
   source = "./modules/helm"
 
   providers = {
