@@ -3,48 +3,69 @@ package generator
 
 import (
 	"context"
+	"google/jss/up12/eventgen/config"
+	"google/jss/up12/eventgen/generator/publishers"
+	"google/jss/up12/pubsub"
 	"log"
+	"sync/atomic"
 	"testing"
 	"time"
-	"up12/eventgen/config"
-	"up12/pubsub/pubsub"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewEvent(t *testing.T) {
 	for i := 0; i < 10; i++ {
-		event := newEvent()
+		event := NewEvent()
 		log.Println("event=", event)
 	}
 }
 
 func TestAddPublishers(t *testing.T) {
-	msgChan := make(chan map[string]interface{})
+	ctx := context.Background()
+	client, err := pubsub.Service.NewClient(ctx)
+	if err != nil {
+		log.Panic(err)
+	}
+	defer client.Close() // nolint:errcheck
 
-	topic := pubsub.NewTopic(config.Config.EventTopicID, config.Config.EventAvsc, msgChan, 1)
+	topic := client.NewTopic(config.Config.EventTopic, config.Config.EventAvsc, 1, 0, 0)
 	defer topic.Stop()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	publishers := publishers.NewPublishers(topic, NewEvent, 10*time.Second, 0, time.Second)
+	defer publishers.Stop()
 
-	go slowGenerate(ctx, msgChan)
-	topic.AddPublishers(ctx, 2)
-	time.Sleep(10 * time.Second)
-	topic.AddPublishers(ctx, -1)
-	time.Sleep(10 * time.Second)
-	topic.AddPublishers(ctx, 1)
-	time.Sleep(10 * time.Second)
+	publishers.Add(ctx, 2)
+	time.Sleep(3 * time.Second)
+	publishers.Add(ctx, -1)
+	time.Sleep(5 * time.Second)
+	publishers.Add(ctx, 1)
+	publishers.WaitFinish()
 }
 
-func slowGenerate(ctx context.Context, msgChan chan map[string]interface{}) {
-	log.Println("Start to generate events!")
-	for {
-		select {
-		case <-ctx.Done():
-			log.Println("Time is up or cancnelled")
-			return
-		default:
-			time.Sleep(1 * time.Second)
-			msgChan <- newEvent()
-		}
-	}
+func TestGeneratorTimeout(t *testing.T) {
+	timeout := 2 * time.Second
+	now := time.Now()
+	Start(NewEvent, 2, timeout, 0, time.Second)
+	running.publishers.WaitFinish()
+	elapsed := time.Since(now).Seconds()
+	log.Printf("elapsed: %v", elapsed)
+	assert.Equal(t, int(timeout.Seconds()), int(elapsed))
+	time.Sleep(1 * time.Second)
+}
+
+func TestGeneratorTimes(t *testing.T) {
+	times := 3
+	threads := 2
+	Start(countNewEvent, threads, 0, times, time.Second)
+	running.publishers.WaitFinish()
+	assert.Equal(t, int32(times*threads), counter)
+	time.Sleep(1 * time.Second)
+}
+
+var counter int32
+
+func countNewEvent() map[string]interface{} {
+	atomic.AddInt32(&counter, 1)
+	return NewEvent()
 }
