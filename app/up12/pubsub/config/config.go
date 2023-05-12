@@ -2,8 +2,8 @@
 package config
 
 import (
+	"google/jss/up12/env"
 	"log"
-	"os"
 )
 
 type config struct {
@@ -15,7 +15,7 @@ var Config config
 
 func init() {
 	Config = config{
-		Project: os.Getenv("PROJECT"),
+		Project: env.GetEnv("GOOGLE_CLOUD_PROJECT", ""),
 	}
-	log.Println("using config:", Config)
+	log.Printf("using config: %+v", Config)
 }

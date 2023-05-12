@@ -3,77 +3,102 @@ package generator
 
 import (
 	"context"
+	"errors"
+	"google/jss/up12/eventgen/config"
+	"google/jss/up12/eventgen/generator/publishers"
+	"google/jss/up12/pubsub"
 	"log"
-	"math/rand"
+	"sync"
 	"time"
-	"up12/eventgen/config"
-	"up12/pubsub/avro"
-	"up12/pubsub/pubsub"
 
-	"github.com/google/uuid"
 	"github.com/linkedin/goavro/v2"
 )
 
-var random = rand.New(rand.NewSource(time.Now().UnixNano()))
-var avgChargeRateKWValues = []int{20, 72, 100, 120, 250}
-var batteryCapacityKWH = []int{40, 50, 58, 62, 75, 77, 82, 100, 129, 131}
-
-var eventCodec *goavro.Codec
-
-func init() {
-	eventCodec = avro.NewCodedecFromFile(config.Config.EventAvsc)
+type generator struct {
+	client     pubsub.Client
+	topic      pubsub.Topic
+	publishers *publishers.Publishers
+	cancel     context.CancelFunc
 }
 
-func newSessionStartTime(now time.Time) time.Time {
-	return now.Add(time.Duration(-1*(random.Intn(86)+5)) * time.Minute)
+func newGenerator(topicID string, codec *goavro.Codec, batchSize int, maxOutstanding int, numGoroutines int) (*generator, error) {
+	var g generator
+
+	client, err := pubsub.Service.NewClient(context.Background())
+	if err != nil {
+		log.Printf("fail to connect to pubsub, err: %v", err)
+		return nil, err
+	}
+	g.client = client
+
+	g.topic = client.NewTopic(topicID, codec, batchSize, maxOutstanding, numGoroutines)
+	return &g, nil
 }
 
-func newAvgChargeRateKW() int {
-	return avgChargeRateKWValues[random.Intn(len(avgChargeRateKWValues))] + random.Intn(3) - 1
+func (g *generator) Run(event publishers.NewMessage, numPublishers int, timeout time.Duration, times int, sleep time.Duration) {
+	log.Printf("run event generator with numPublishers: %v, timeout: %v, times: %v, sleep: %v", numPublishers, timeout, times, sleep)
+	ctx, cancel := context.WithCancel(context.Background())
+	g.cancel = cancel
+
+	pbrs := publishers.NewPublishers(g.topic, event, timeout, times, sleep)
+	pbrs.Add(ctx, numPublishers)
+	g.publishers = pbrs
+
+	go func() {
+		pbrs.WaitFinish()
+		g.release()
+	}()
 }
 
-func newBatteryCapacityKWH() int {
-	return batteryCapacityKWH[random.Intn(len(avgChargeRateKWValues))]
-}
-
-func newBatteryLevelStart() float32 {
-	return (float32(random.Intn(76)) + 5) / 100 // 0.05 ~ 0.8
-}
-
-func newEvent() map[string]interface{} {
-	now := time.Now()
-	return map[string]interface{}{
-		"session_id":           uuid.New().String(),
-		"station_id":           random.Intn(101),
-		"location":             config.Config.Location,
-		"session_start_time":   newSessionStartTime(now),
-		"session_end_time":     now,
-		"avg_charge_rate_kw":   newAvgChargeRateKW(),
-		"battery_capacity_kwh": newBatteryCapacityKWH(),
-		"battery_level_start":  newBatteryLevelStart(),
+// Stop stops the generator gracefully
+func (g *generator) Stop() {
+	if g.publishers != nil {
+		g.publishers.Stop() // Resources will be released after all publishers have finished
+		// g.cancel()	TBD force stop
+	} else {
+		g.release()
 	}
 }
 
-func generate(ctx context.Context, msgChan chan map[string]interface{}) {
-	log.Println("Start to generate events!")
-	for {
-		select {
-		case <-ctx.Done():
-			log.Println("Time is up or cancnelled")
-			return
-		default:
-			msgChan <- newEvent()
-		}
+func (g *generator) release() {
+	g.topic.Stop()
+	g.client.Close()
+	mux.Lock()
+	defer mux.Unlock()
+	if running == g {
+		running = nil
 	}
 }
 
-// Generate generates event and publish to event Topic
-func Start(ctx context.Context) {
-	msgChan := make(chan map[string]interface{})
+var mux sync.Mutex     // Protect running singleon
+var running *generator // Singleton, only one generator at the same time.
 
-	topic := pubsub.NewTopic(config.Config.EventTopicID, config.Config.EventAvsc, msgChan, 1)
-	defer topic.Stop()
+// Start generates event and publish to event Topic
+func Start(event publishers.NewMessage, numPublishers int, timeout time.Duration, times int, sleep time.Duration) error {
+	mux.Lock()
+	defer mux.Unlock()
 
-	topic.AddPublishers(ctx, config.Config.Publishers)
-	generate(ctx, msgChan)
+	if running != nil {
+		return errors.New("there is already an running generator")
+	}
+	g, err := newGenerator(config.Config.EventTopic, config.Config.EventAvsc, 1, config.Config.PublisherMaxOutstanding, config.Config.PublisherNumGoroutines)
+	if err != nil {
+		return err
+	}
+	g.Run(event, numPublishers, timeout, times, sleep)
+	running = g
+	return nil
+}
+
+// Stop stops the event generating
+func Stop() {
+	mux.Lock()
+	defer mux.Unlock()
+
+	if running == nil {
+		log.Printf("there is no running generator")
+		return
+	}
+	running.Stop()
+	running = nil
 }

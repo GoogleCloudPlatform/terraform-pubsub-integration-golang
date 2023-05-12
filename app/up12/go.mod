@@ -1,4 +1,4 @@
-module up12/pubsub
+module google/jss/up12
 
 go 1.20
 

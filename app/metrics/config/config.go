@@ -2,30 +2,23 @@
 package config
 
 import (
+	"google/jss/up12/avro"
+	"google/jss/up12/env"
 	"log"
-	"os"
-	"time"
-)
 
-type MetricsAppType string
-
-const (
-	MetricsAck      MetricsAppType = "MetricsAck"
-	MetricsNack     MetricsAppType = "MetricsNack"
-	MetricsComplete MetricsAppType = "MetricsComplete"
+	"github.com/linkedin/goavro/v2"
 )
 
 type config struct {
-	MetricsAppType      MetricsAppType
-	Location            string
-	EventAvsc           string
-	EventTopicID        string
-	SubscriptionID      string
-	MetricsTopicID      string
-	MetricsAckAvsc      string
-	MetricsCompleteAvsc string
-	BatchSize           int
-	Timeout             time.Duration
+	EventAvsc                *goavro.Codec
+	EventSubscription        string
+	MetricsTopic             string
+	MetricsAckAvsc           *goavro.Codec
+	MetricsCompleteAvsc      *goavro.Codec
+	SubscriberMaxOutstanding int
+	SubscriberNumGoroutines  int
+	PublisherNumGoroutines   int
+	BatchSize                int
 }
 
 // Config is the global configuration parsed from environment variables.
@@ -33,16 +26,15 @@ var Config config
 
 func init() {
 	Config = config{
-		MetricsAppType:      MetricsAppType(os.Getenv("METRICS_APP_TYPE")),
-		Location:            os.Getenv("LOCATION"),
-		EventAvsc:           os.Getenv("EVENT_AVSC"),
-		EventTopicID:        os.Getenv("EVENT_TOPIC_ID"),
-		SubscriptionID:      os.Getenv("SUBSCRIPTION_ID"),
-		MetricsTopicID:      os.Getenv("METRICS_TOPIC_ID"),
-		MetricsAckAvsc:      os.Getenv("METRICS_ACK_AVSC"),
-		MetricsCompleteAvsc: os.Getenv("METRICS_COMPLETE_AVSC"),
-		BatchSize:           100,
-		Timeout:             30 * time.Second,
+		EventSubscription:        env.GetEnv("EVENT_SUBSCRIPTION", "EventSubscription"),
+		EventAvsc:                avro.NewCodedecFromFile(env.GetEnv("EVENT_AVSC", "Event.avsc")),
+		MetricsTopic:             env.GetEnv("METRICS_TOPIC", "MetricsTopic"),
+		MetricsAckAvsc:           avro.NewCodedecFromFile(env.GetEnv("METRICS_ACK_AVSC", "MetricsAck.avsc")),
+		MetricsCompleteAvsc:      avro.NewCodedecFromFile(env.GetEnv("METRICS_COMPLETE_AVSC", "MetricsComplete.avsc")),
+		SubscriberMaxOutstanding: env.GetEnvInt("SUBSCRIBER_FLOW_CONTROL_MAX_OUTSTANDING_MESSAGES", 100),
+		SubscriberNumGoroutines:  env.GetEnvInt("SUBSCRIBER_THREADS", 0), // use default 10
+		PublisherNumGoroutines:   env.GetEnvInt("PUBLISHER_THREADS", 0),  // use default 25 * GOMAXPROCS
+		BatchSize:                env.GetEnvInt("PUBLISHER_BATCH_SIZE", 100),
 	}
-	log.Println("using config:", Config)
+	log.Printf("using config: %+v", Config)
 }
