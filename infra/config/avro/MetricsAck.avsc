@@ -1,6 +1,6 @@
 {
     "type": "record",
-    "name": "MetricsAck",
+    "name": "Metrics",
     "fields": [
         {
             "name": "session_id",
