@@ -1,3 +1,17 @@
+// Copyright 2023 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Package pubsub provides API to publish and receive message
 package pubsub
 
@@ -7,13 +21,17 @@ import (
 	"google/jss/up12/avro"
 	"google/jss/up12/pubsub/config"
 	"log"
+	"time"
 
 	"cloud.google.com/go/pubsub"
+	vkit "cloud.google.com/go/pubsub/apiv1"
+	"github.com/googleapis/gax-go/v2"
 	"github.com/linkedin/goavro/v2"
+	"google.golang.org/grpc/codes"
 )
 
 type service interface {
-	NewClient(context.Context) (Client, error)
+	NewClient(context.Context, *pubsub.ClientConfig) (Client, error)
 }
 
 // Service used to creates client for bucket handling.
@@ -22,9 +40,32 @@ var Service service = new(pubsubService)
 type pubsubService struct {
 }
 
-// NewClient creates the client for bucket handling.
-func (*pubsubService) NewClient(ctx context.Context) (Client, error) {
-	client, err := pubsub.NewClient(ctx, config.Config.Project)
+func NewClientBackoffConfig(initial time.Duration, max time.Duration) *pubsub.ClientConfig {
+	retryer := func() gax.Retryer {
+		return gax.OnCodes([]codes.Code{
+			codes.Aborted,
+			codes.Canceled,
+			codes.Internal,
+			codes.ResourceExhausted,
+			codes.Unknown,
+			codes.Unavailable,
+			codes.DeadlineExceeded,
+		}, gax.Backoff{
+			Initial: initial,
+			Max:     max,
+		})
+	}
+
+	return &pubsub.ClientConfig{
+		PublisherCallOptions: &vkit.PublisherCallOptions{
+			Publish: []gax.CallOption{gax.WithRetry(retryer)},
+		},
+	}
+}
+
+// NewClient creates the client for bucket handling. Using the default backoff config if clientCfg is nil
+func (*pubsubService) NewClient(ctx context.Context, clientCfg *pubsub.ClientConfig) (Client, error) {
+	client, err := pubsub.NewClientWithConfig(ctx, config.Config.Project, clientCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -42,17 +83,19 @@ type pubsubClient struct {
 	client *pubsub.Client
 }
 
-// NewTopic get the topic for publishing message
-func (c *pubsubClient) NewTopic(topicID string, codec *goavro.Codec, batchSize int, maxOutstanding int, numGoroutines int) Topic {
+// NewTopic get the topic for publishing message. Using the default value if batchSize, numGoroutines, maxOutstanding <= 0
+func (c *pubsubClient) NewTopic(topicID string, codec *goavro.Codec, batchSize int, numGoroutines int, maxOutstanding int) Topic {
 	topic := c.client.Topic(topicID)
 
-	topic.PublishSettings.CountThreshold = batchSize
-	topic.PublishSettings.FlowControlSettings.LimitExceededBehavior = pubsub.FlowControlBlock
-	if maxOutstanding > 0 {
-		topic.PublishSettings.FlowControlSettings.MaxOutstandingMessages = maxOutstanding
+	if batchSize > 0 {
+		topic.PublishSettings.CountThreshold = batchSize
 	}
 	if numGoroutines > 0 {
 		topic.PublishSettings.NumGoroutines = numGoroutines // default is 25 * GOMAXPROCS
+	}
+	topic.PublishSettings.FlowControlSettings.LimitExceededBehavior = pubsub.FlowControlBlock
+	if maxOutstanding > 0 {
+		topic.PublishSettings.FlowControlSettings.MaxOutstandingMessages = maxOutstanding
 	}
 	return &pubsubTopic{
 		id:    topicID,
@@ -61,15 +104,15 @@ func (c *pubsubClient) NewTopic(topicID string, codec *goavro.Codec, batchSize i
 	}
 }
 
-// NewSubscription gets the subscription for receiving message
-func (c *pubsubClient) NewSubscription(ID string, codec *goavro.Codec, maxOutstanding int, numGoroutines int) *Subscription {
+// NewSubscription gets the subscription for receiving message. Using the default value if maxOutstanding, numGoroutines <= 0
+func (c *pubsubClient) NewSubscription(ID string, codec *goavro.Codec, numGoroutines int, maxOutstanding int) *Subscription {
 	sub := c.client.Subscription(ID)
 
-	if maxOutstanding > 0 {
-		sub.ReceiveSettings.MaxOutstandingMessages = maxOutstanding
-	}
 	if numGoroutines > 0 {
 		sub.ReceiveSettings.NumGoroutines = numGoroutines // default is 10
+	}
+	if maxOutstanding > 0 {
+		sub.ReceiveSettings.MaxOutstandingMessages = maxOutstanding
 	}
 	return &Subscription{
 		ID:           ID,
