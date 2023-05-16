@@ -1,4 +1,18 @@
-// Package generator generates event and publish to event topic
+// Copyright 2023 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package generator creates event message and publish to event topic
 package generator
 
 import (
@@ -21,17 +35,18 @@ type generator struct {
 	cancel     context.CancelFunc
 }
 
-func newGenerator(topicID string, codec *goavro.Codec, batchSize int, maxOutstanding int, numGoroutines int) (*generator, error) {
+func newGenerator(topicID string, codec *goavro.Codec, batchSize int, numGoroutines int, maxOutstanding int) (*generator, error) {
 	var g generator
 
-	client, err := pubsub.Service.NewClient(context.Background())
+	backoff := pubsub.NewClientBackoffConfig(config.Config.PublisherRetryInit, config.Config.PublisherRetryTotal)
+	client, err := pubsub.Service.NewClient(context.Background(), backoff)
 	if err != nil {
 		log.Printf("fail to connect to pubsub, err: %v", err)
 		return nil, err
 	}
 	g.client = client
 
-	g.topic = client.NewTopic(topicID, codec, batchSize, maxOutstanding, numGoroutines)
+	g.topic = client.NewTopic(topicID, codec, batchSize, numGoroutines, maxOutstanding)
 	return &g, nil
 }
 
@@ -81,7 +96,7 @@ func Start(event publishers.NewMessage, numPublishers int, timeout time.Duration
 	if running != nil {
 		return errors.New("there is already an running generator")
 	}
-	g, err := newGenerator(config.Config.EventTopic, config.Config.EventAvsc, 1, config.Config.PublisherMaxOutstanding, config.Config.PublisherNumGoroutines)
+	g, err := newGenerator(config.Config.EventTopic, config.Config.EventAvsc, config.Config.PublisherBatchSize, config.Config.PublisherNumGoroutines, config.Config.PublisherMaxOutstanding)
 	if err != nil {
 		return err
 	}

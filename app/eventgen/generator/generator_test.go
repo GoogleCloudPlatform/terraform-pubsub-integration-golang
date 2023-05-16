@@ -1,4 +1,18 @@
-// Package generator generates event and publish to event topic
+// Copyright 2023 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package generator creates event message and publish to event topic
 package generator
 
 import (
@@ -23,7 +37,7 @@ func TestNewEvent(t *testing.T) {
 
 func TestAddPublishers(t *testing.T) {
 	ctx := context.Background()
-	client, err := pubsub.Service.NewClient(ctx)
+	client, err := pubsub.Service.NewClient(ctx, nil)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -46,7 +60,8 @@ func TestAddPublishers(t *testing.T) {
 func TestGeneratorTimeout(t *testing.T) {
 	timeout := 2 * time.Second
 	now := time.Now()
-	Start(NewEvent, 2, timeout, 0, time.Second)
+	err := Start(NewEvent, 2, timeout, 0, time.Second)
+	assert.Nil(t, err)
 	running.publishers.WaitFinish()
 	elapsed := time.Since(now).Seconds()
 	log.Printf("elapsed: %v", elapsed)
@@ -57,7 +72,8 @@ func TestGeneratorTimeout(t *testing.T) {
 func TestGeneratorTimes(t *testing.T) {
 	times := 3
 	threads := 2
-	Start(countNewEvent, threads, 0, times, time.Second)
+	err := Start(countNewEvent, threads, 0, times, time.Second)
+	assert.Nil(t, err)
 	running.publishers.WaitFinish()
 	assert.Equal(t, int32(times*threads), counter)
 	time.Sleep(1 * time.Second)

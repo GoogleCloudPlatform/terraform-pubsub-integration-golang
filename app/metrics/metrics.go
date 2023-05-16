@@ -1,3 +1,17 @@
+// Copyright 2023 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Package metrics receives event and generate metrics
 package metrics
 
@@ -10,21 +24,19 @@ import (
 	"math/rand"
 	"reflect"
 	"time"
-
-	"github.com/linkedin/goavro/v2"
 )
 
 // Start starts to receive event and generate metrics
-func Start(ctx context.Context, codec *goavro.Codec, metricFactory MetricFactory) error {
-	client, err := pubsub.Service.NewClient(ctx)
+func Start(ctx context.Context, metricFactory MetricFactory) error {
+	client, err := pubsub.Service.NewClient(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer client.Close() // nolint: errcheck
 
-	sub := client.NewSubscription(config.Config.EventSubscription, config.Config.EventAvsc, config.Config.SubscriberMaxOutstanding, config.Config.SubscriberNumGoroutines)
+	sub := client.NewSubscription(config.Config.EventSubscription, config.Config.EventAvsc, config.Config.SubscriberNumGoroutines, config.Config.SubscriberMaxOutstanding)
 
-	metricsTopic := client.NewTopic(config.Config.MetricsTopic, codec, config.Config.BatchSize, 0, config.Config.PublisherNumGoroutines)
+	metricsTopic := client.NewTopic(config.Config.MetricsTopic, config.Config.MetricsAvsc, config.Config.PublisherBatchSize, config.Config.PublisherNumGoroutines, 0)
 	defer metricsTopic.Stop()
 
 	handler := eventHandler(client, metricsTopic, metricFactory)

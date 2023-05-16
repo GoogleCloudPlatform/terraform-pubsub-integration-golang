@@ -1,3 +1,17 @@
+// Copyright 2023 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Package config keeps config for used Globally.
 package config
 
@@ -15,8 +29,11 @@ type config struct {
 	Location                string
 	EventTopic              string
 	EventAvsc               *goavro.Codec // codec is thread safe
+	PublisherBatchSize      int
 	PublisherNumGoroutines  int
 	PublisherMaxOutstanding int
+	PublisherRetryInit      time.Duration
+	PublisherRetryTotal     time.Duration
 	Threads                 int
 	Timeout                 time.Duration
 	Sleep                   time.Duration
@@ -31,8 +48,11 @@ func init() {
 		Location:                env.GetEnv("GOOGLE_CLOUD_LOCATION", "west"),
 		EventTopic:              env.GetEnv("EVENT_TOPIC", "EventTopic"),
 		EventAvsc:               avro.NewCodedecFromFile(env.GetEnv("EVENT_AVSC", "Event.avsc")),
+		PublisherBatchSize:      env.GetEnvInt("PUBLISHER_BATCH_SIZE", 100),
 		PublisherNumGoroutines:  env.GetEnvInt("PUBLISHER_THREADS", 0), // use default 25 * GOMAXPROCS
 		PublisherMaxOutstanding: env.GetEnvInt("PUBLISHER_FLOW_CONTROL_MAX_OUTSTANDING_MESSAGES", 100),
+		PublisherRetryInit:      time.Duration(env.GetEnvFloat64("PUBLISHER_RETRY_INITIAL_TIMEOUT", 5) * float64(time.Second)),
+		PublisherRetryTotal:     time.Duration(env.GetEnvFloat64("PUBLISHER_RETRY_TOTAL_TIMEOUT", 600) * float64(time.Second)),
 		Threads:                 env.GetEnvInt("EVENT_GENERATOR_THREADS", 200),
 		Timeout:                 time.Duration(env.GetEnvFloat64("EVENT_GENERATOR_RUNTIME", 5) * float64(time.Minute)),
 		Sleep:                   time.Duration(env.GetEnvFloat64("EVENT_GENERATOR_SLEEP_TIME", 0.2) * float64(time.Second)),
