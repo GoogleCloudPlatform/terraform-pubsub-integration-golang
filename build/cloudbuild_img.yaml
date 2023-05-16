@@ -22,7 +22,7 @@ steps:
     dir: app
     waitFor: ['configure-docker-authentication']
     name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-f', 'DockerfileEventGenerator', '-t', 'gcr.io/${PROJECT_ID}/${_EVENT_GENERATOR_IMAGE_REPO_NAME}:${_IMAGE_TAG}', '.']
+    args: ['build', '-f', 'DockerfileEventGenerator', '-t', 'gcr.io/${PROJECT_ID}/${_EVENT_GENERATOR_IMAGE_REPO_NAME}:${_IMAGE_TAG}', '../']
 
   - id: push-event-generator-docker-image
     dir: app
@@ -34,7 +34,7 @@ steps:
     dir: app
     waitFor: ['configure-docker-authentication']
     name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-f', 'DockerfileMetricsAck', '-t', 'gcr.io/${PROJECT_ID}/${_METRICS_ACK_IMAGE_REPO_NAME}:${_IMAGE_TAG}', '.']
+    args: ['build', '-f', 'DockerfileMetricsAck', '-t', 'gcr.io/${PROJECT_ID}/${_METRICS_ACK_IMAGE_REPO_NAME}:${_IMAGE_TAG}', '../']
 
   - id: push-metrics-ack-docker-image
     dir: app
@@ -46,7 +46,7 @@ steps:
     dir: app
     waitFor: ['configure-docker-authentication']
     name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-f', 'DockerfileMetricsNack', '-t', 'gcr.io/${PROJECT_ID}/${_METRICS_NACK_IMAGE_REPO_NAME}:${_IMAGE_TAG}', '.']
+    args: ['build', '-f', 'DockerfileMetricsNack', '-t', 'gcr.io/${PROJECT_ID}/${_METRICS_NACK_IMAGE_REPO_NAME}:${_IMAGE_TAG}', '../']
 
   - id: push-metrics-nack-docker-image
     dir: app
@@ -58,7 +58,7 @@ steps:
     dir: app
     waitFor: ['configure-docker-authentication']
     name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-f', 'DockerfileMetricsComplete', '-t', 'gcr.io/${PROJECT_ID}/${_METRICS_COMPLETE_IMAGE_REPO_NAME}:${_IMAGE_TAG}', '.']
+    args: ['build', '-f', 'DockerfileMetricsComplete', '-t', 'gcr.io/${PROJECT_ID}/${_METRICS_COMPLETE_IMAGE_REPO_NAME}:${_IMAGE_TAG}', '../']
 
   - id: push-metrics-complete-docker-image
     dir: app
