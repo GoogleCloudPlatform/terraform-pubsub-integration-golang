@@ -16,23 +16,25 @@
 package avro
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"reflect"
 
 	"github.com/linkedin/goavro/v2"
 )
 
 // NewCodedecFromFile creates codedec from avro schema file
-func NewCodedecFromFile(path string) *goavro.Codec {
+func NewCodedecFromFile(path string) (*goavro.Codec, error) {
 	schema, err := os.ReadFile(path)
 	if err != nil {
-		log.Panicln(err)
+		return nil, err
 	}
 	codec, err := goavro.NewCodec(string(schema))
 	if err != nil {
-		log.Panicln(err)
+		return nil, err
 	}
-	return codec
+	return codec, nil
 }
 
 // EncodeToJSON encodes data to JSON using given avro codedec
@@ -58,4 +60,34 @@ func DecodeFromJSON(codedec *goavro.Codec, json []byte) (map[string]interface{},
 	}
 	return data, err
 
+}
+
+// GetValue gets value from given map using given key and converts to given type
+func GetValue[T any](data map[string]interface{}, key string, valueType T) (T, error) {
+	val, ok := data[key]
+	if !ok {
+		return valueType, fmt.Errorf("the key %s does not exist", key)
+	}
+	return toType(val, valueType)
+}
+
+func toType[T any](data interface{}, valueType T) (T, error) {
+	value, ok := data.(T)
+	if !ok {
+		return valueType, fmt.Errorf("the type of %v is %v, but %v is expected", data, reflect.TypeOf(data), reflect.TypeOf(valueType))
+	}
+	return value, nil
+}
+
+// GetFloatTypeValue gets float32 value from given map using given key
+func GetFloatTypeValue(data map[string]interface{}, key string) (float32, error) {
+	valueMap, err := GetValue(data, key, map[string]interface{}{})
+	if err != nil {
+		return 0, err
+	}
+	value, err := GetValue(valueMap, "float", float32(0))
+	if err != nil {
+		return 0, err
+	}
+	return value, nil
 }

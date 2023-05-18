@@ -18,8 +18,8 @@ services:
     build:
       context: ../
       dockerfile: ./app/DockerfileEventGenerator
-    image: up12/event_generator
-    container_name: up12-event_generator
+    image: pubsub-integration/event_generator
+    container_name: pubsub-integration-event_generator
     environment:
       - REST_PORT=${REST_PORT}
       - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
@@ -36,16 +36,16 @@ services:
     ports:
       - ${REST_PORT}:${REST_PORT}
     networks:
-      - up12
+      - pubsub-integration
     volumes:
       - ${HOME}/.config/gcloud:/root/.config/gcloud
-      
+ 
   metrics_ack:
     build:
       context: ../
       dockerfile: ./app/DockerfileMetricsAck
-    image: up12/metrics_ack
-    container_name: up12-metrics_ack
+    image: pubsub-integration/metrics_ack
+    container_name: pubsub-integration-metrics_ack
     profiles: ["metrics_ack"]
     environment:
       - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
@@ -56,7 +56,7 @@ services:
       - PUBLISHER_BATCH_SIZE=${METRICS_PUBLISHER_BATCH_SIZE}
       - PUBLISHER_THREADS=${METRICS_PUBLISHER_THREADS}
     networks:
-      - up12
+      - pubsub-integration
     volumes:
       - ${HOME}/.config/gcloud:/root/.config/gcloud
 
@@ -64,8 +64,8 @@ services:
     build:
       context: ../
       dockerfile: ./app/DockerfileMetricsNack
-    image: up12/metrics_nack
-    container_name: up12-metrics_nack
+    image: pubsub-integration/metrics_nack
+    container_name: pubsub-integration-metrics_nack
     profiles: ["metrics_nack"]
     environment:
       - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
@@ -76,7 +76,7 @@ services:
       - PUBLISHER_BATCH_SIZE=${METRICS_PUBLISHER_BATCH_SIZE}
       - PUBLISHER_THREADS=${METRICS_PUBLISHER_THREADS}
     networks:
-      - up12
+      - pubsub-integration
     volumes:
       - ${HOME}/.config/gcloud:/root/.config/gcloud
 
@@ -84,8 +84,8 @@ services:
     build:
       context: ../
       dockerfile: ./app/DockerfileMetricsComplete
-    image: up12/metrics_complete
-    container_name: up12-metrics_complete
+    image: upubsub-integrationp12/metrics_complete
+    container_name: pubsub-integration-metrics_complete
     profiles: ["metrics_complete"]
     environment:
       - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
@@ -96,10 +96,10 @@ services:
       - PUBLISHER_BATCH_SIZE=${METRICS_PUBLISHER_BATCH_SIZE}
       - PUBLISHER_THREADS=${METRICS_PUBLISHER_THREADS}
     networks:
-      - up12
+      - pubsub-integration
     volumes:
       - ${HOME}/.config/gcloud:/root/.config/gcloud
 
 networks:
-  up12:
+  pubsub-integration:
     driver: bridge

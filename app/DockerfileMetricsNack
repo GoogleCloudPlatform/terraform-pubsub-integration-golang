@@ -18,16 +18,22 @@ WORKDIR /build
 COPY go.work .
 COPY go.work.sum .
 COPY ./app ./app
+
+# for testing
+COPY ./infra/config/avro ./avro
+ENV EVENT_AVSC="/build/avro/Event.avsc"
+ENV METRICS_AVSC="/build/avro/MetricsAck.avsc"
+
 WORKDIR /build/app/metrics/nack
-# RUN go test ./...
-RUN go build -o metrics
+RUN go test ../ ./...
+RUN go build -o metricsNack
 
 FROM alpine:latest
 WORKDIR /app
-COPY --from=builder /build/app/metrics/nack/metrics .
+COPY --from=builder /build/app/metrics/nack/metricsNack .
 COPY ./infra/config/avro ./avro
 
 ENV EVENT_AVSC="./avro/Event.avsc"
 ENV METRICS_AVSC="./avro/MetricsAck.avsc"
 
-ENTRYPOINT [ "./metrics" ]
+ENTRYPOINT [ "./metricsNack" ]

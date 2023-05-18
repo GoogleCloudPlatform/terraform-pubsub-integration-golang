@@ -16,7 +16,7 @@
 package generator
 
 import (
-	"google/jss/up12/eventgen/config"
+	"google/jss/pubsub-integration/eventgen/config"
 	"math/rand"
 	"time"
 
@@ -24,30 +24,33 @@ import (
 )
 
 var random = rand.New(rand.NewSource(time.Now().UnixNano()))
-var avgChargeRateKWValues = []int{20, 72, 100, 120, 250}
-var batteryCapacityKWH = []int{40, 50, 58, 62, 75, 77, 82, 100, 129, 131}
+var avgChargeRateKWValues = [5]float32{20, 72, 100, 120, 250}
+var batteryCapacityKWH = [10]float32{40, 50, 58, 62, 75, 77, 82, 100, 129, 131}
 
 func newSessionStartTime(now time.Time) time.Time {
-	return now.Add(time.Duration(-1*(random.Intn(86)+5)) * time.Minute)
+	return now.Add(-1 * time.Duration(random.Intn(86)+5) * time.Minute) // 5 ~ 90 minutes ago
 }
 
-func newAvgChargeRateKW() int {
-	return avgChargeRateKWValues[random.Intn(len(avgChargeRateKWValues))] + random.Intn(3) - 1
+func newAvgChargeRateKW() float32 {
+	avg := avgChargeRateKWValues[random.Intn(len(avgChargeRateKWValues))]
+	avg += (random.Float32() * 2) - 1 // +-1
+	return avg
 }
 
-func newBatteryCapacityKWH() int {
-	return batteryCapacityKWH[random.Intn(len(avgChargeRateKWValues))]
+func newBatteryCapacityKWH() float32 {
+	return batteryCapacityKWH[random.Intn(len(batteryCapacityKWH))]
 }
 
 func newBatteryLevelStart() float32 {
 	return (float32(random.Intn(76)) + 5) / 100 // 0.05 ~ 0.8
 }
 
+// NewEvent creates a new event
 func NewEvent() map[string]interface{} {
-	now := time.Now()
+	now := time.Now().Truncate(time.Microsecond).UTC()
 	return map[string]interface{}{
 		"session_id":           uuid.New().String(),
-		"station_id":           random.Intn(101),
+		"station_id":           int32(random.Intn(101)),
 		"location":             config.Config.Location,
 		"session_start_time":   newSessionStartTime(now),
 		"session_end_time":     now,

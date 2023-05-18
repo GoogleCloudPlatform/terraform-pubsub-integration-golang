@@ -16,7 +16,7 @@
 package config
 
 import (
-	"google/jss/up12/env"
+	"google/jss/pubsub-integration/env"
 	"log"
 )
 

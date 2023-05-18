@@ -16,8 +16,8 @@
 package api
 
 import (
-	"google/jss/up12/eventgen/config"
-	"google/jss/up12/eventgen/generator"
+	"google/jss/pubsub-integration/eventgen/config"
+	"google/jss/pubsub-integration/eventgen/generator"
 	"log"
 	"net/http"
 	"time"
@@ -40,18 +40,15 @@ func responseError(c *gin.Context, statusCode int, err error) {
 
 // GeneratorReq holds the request parameter for generating event
 type GeneratorReq struct {
-	Thread        int     `form:"thread"`
-	ExecutionTime float64 `form:"executionTime"` // in minutes
-	Times         int     `form:"times"`
-	Sleep         float64 `form:"sleep"` // in seconds
+	Threads int     `form:"threads"`
+	RunTime float64 `form:"runTime"` // in minutes
 }
 
 func random(c *gin.Context) {
 	log.Printf("start to generate event")
 	req := GeneratorReq{
-		Thread:        config.Config.Threads,
-		ExecutionTime: config.Config.Timeout.Minutes(),
-		Sleep:         config.Config.Sleep.Seconds(),
+		Threads: config.Config.Threads,
+		RunTime: config.Config.Timeout.Minutes(),
 	}
 	if err := c.BindQuery(&req); err != nil {
 		log.Printf("bad request parameters, err: %v", err)
@@ -59,9 +56,8 @@ func random(c *gin.Context) {
 		return
 	}
 	log.Printf("request parameters: %+v", req)
-	timeout := time.Duration(req.ExecutionTime * float64(time.Minute))
-	sleep := time.Duration(req.Sleep * float64(time.Second))
-	if err := generator.Start(generator.NewEvent, req.Thread, timeout, req.Times, sleep); err != nil {
+	timeout := time.Duration(req.RunTime * float64(time.Minute))
+	if err := generator.Start(generator.NewEvent, req.Threads, timeout); err != nil {
 		responseError(c, http.StatusBadRequest, err)
 	}
 }

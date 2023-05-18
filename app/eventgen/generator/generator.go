@@ -18,9 +18,9 @@ package generator
 import (
 	"context"
 	"errors"
-	"google/jss/up12/eventgen/config"
-	"google/jss/up12/eventgen/generator/publishers"
-	"google/jss/up12/pubsub"
+	"google/jss/pubsub-integration/eventgen/config"
+	"google/jss/pubsub-integration/eventgen/generator/publishers"
+	"google/jss/pubsub-integration/pubsub"
 	"log"
 	"sync"
 	"time"
@@ -50,12 +50,12 @@ func newGenerator(topicID string, codec *goavro.Codec, batchSize int, numGorouti
 	return &g, nil
 }
 
-func (g *generator) Run(event publishers.NewMessage, numPublishers int, timeout time.Duration, times int, sleep time.Duration) {
-	log.Printf("run event generator with numPublishers: %v, timeout: %v, times: %v, sleep: %v", numPublishers, timeout, times, sleep)
+func (g *generator) Run(event publishers.NewMessage, numPublishers int, timeout time.Duration) {
+	log.Printf("run event generator with numPublishers: %v, timeout: %v", numPublishers, timeout)
 	ctx, cancel := context.WithCancel(context.Background())
 	g.cancel = cancel
 
-	pbrs := publishers.NewPublishers(g.topic, event, timeout, times, sleep)
+	pbrs := publishers.NewPublishers(g.topic, event, timeout)
 	pbrs.Add(ctx, numPublishers)
 	g.publishers = pbrs
 
@@ -65,11 +65,11 @@ func (g *generator) Run(event publishers.NewMessage, numPublishers int, timeout 
 	}()
 }
 
-// Stop stops the generator gracefully
+// Stop stops the generator and release resources
 func (g *generator) Stop() {
 	if g.publishers != nil {
 		g.publishers.Stop() // Resources will be released after all publishers have finished
-		// g.cancel()	TBD force stop
+		g.cancel()          // force stop generator
 	} else {
 		g.release()
 	}
@@ -77,7 +77,9 @@ func (g *generator) Stop() {
 
 func (g *generator) release() {
 	g.topic.Stop()
-	g.client.Close()
+	if err := g.client.Close(); err != nil {
+		log.Printf("fail to close pubsub client, err: %v", err)
+	}
 	mux.Lock()
 	defer mux.Unlock()
 	if running == g {
@@ -89,7 +91,7 @@ var mux sync.Mutex     // Protect running singleon
 var running *generator // Singleton, only one generator at the same time.
 
 // Start generates event and publish to event Topic
-func Start(event publishers.NewMessage, numPublishers int, timeout time.Duration, times int, sleep time.Duration) error {
+func Start(event publishers.NewMessage, numPublishers int, timeout time.Duration) error {
 	mux.Lock()
 	defer mux.Unlock()
 
@@ -100,7 +102,7 @@ func Start(event publishers.NewMessage, numPublishers int, timeout time.Duration
 	if err != nil {
 		return err
 	}
-	g.Run(event, numPublishers, timeout, times, sleep)
+	g.Run(event, numPublishers, timeout)
 	running = g
 	return nil
 }

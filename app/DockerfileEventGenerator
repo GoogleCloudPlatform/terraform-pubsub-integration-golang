@@ -18,8 +18,13 @@ WORKDIR /build
 COPY go.work .
 COPY go.work.sum .
 COPY ./app ./app
+
+# for testing
+COPY ./infra/config/avro ./avro
+ENV EVENT_AVSC="/build/avro/Event.avsc"
+
 WORKDIR /build/app/eventgen
-# RUN go test ./...
+RUN go test ./...
 RUN go build -o eventgen
 
 FROM alpine:latest

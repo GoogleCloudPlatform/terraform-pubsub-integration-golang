@@ -1,6 +1,6 @@
 {
     "type": "record",
-    "name": "MetricsComplete",
+    "name": "Metrics",
     "fields": [
         {
             "name": "session_id",
