@@ -18,20 +18,19 @@ package main
 import (
 	"context"
 	"errors"
-	"google/jss/up12/metrics"
-	"google/jss/up12/pubsub"
+	"google/jss/pubsub-integration/metrics"
 	"log"
 	"time"
 )
 
 func main() {
 	ctx := context.Background()
-	if err := metrics.Start(ctx, metricNack); err != nil {
+	if err := metrics.Start(ctx, newNackMetrics); err != nil {
 		log.Fatalf("fail to start metircs nack, err: %v", err)
 	}
 }
 
-func metricNack(message *pubsub.Message, ackTime time.Time, processingTime time.Duration) (map[string]interface{}, error) {
+func newNackMetrics(event map[string]interface{}, publishTime time.Time, ackTime time.Time, processingTime time.Duration) (map[string]interface{}, error) {
 	// simulate a bug 🐞 and nack the message
 	return nil, errors.New("simulate a bug 🐞 and nack the message")
 }

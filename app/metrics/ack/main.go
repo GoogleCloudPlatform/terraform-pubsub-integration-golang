@@ -17,13 +17,15 @@ package main
 
 import (
 	"context"
-	"google/jss/up12/metrics"
+	"google/jss/pubsub-integration/metrics"
+	ackMetrics "google/jss/pubsub-integration/metrics/ack/metrics"
+
 	"log"
 )
 
 func main() {
 	ctx := context.Background()
-	if err := metrics.Start(ctx, metrics.NewMetric); err != nil {
+	if err := metrics.Start(ctx, ackMetrics.New); err != nil {
 		log.Fatalf("fail to start metircs ack, err: %v", err)
 	}
 }

@@ -16,8 +16,8 @@
 package config
 
 import (
-	"google/jss/up12/avro"
-	"google/jss/up12/env"
+	"google/jss/pubsub-integration/avro"
+	"google/jss/pubsub-integration/env"
 	"log"
 	"time"
 
@@ -36,18 +36,22 @@ type config struct {
 	PublisherRetryTotal     time.Duration
 	Threads                 int
 	Timeout                 time.Duration
-	Sleep                   time.Duration
 }
 
 // Config is the global configuration parsed from environment variables.
 var Config config
 
 func init() {
+	eventAvsc, err := avro.NewCodedecFromFile(env.GetEnv("EVENT_AVSC", "Event.avsc"))
+	if err != nil {
+		log.Fatalf("fail to create event avro codec, err: %v", err)
+	}
+
 	Config = config{
 		RESTPort:                env.GetEnv("REST_PORT", "8001"),
 		Location:                env.GetEnv("GOOGLE_CLOUD_LOCATION", "west"),
 		EventTopic:              env.GetEnv("EVENT_TOPIC", "EventTopic"),
-		EventAvsc:               avro.NewCodedecFromFile(env.GetEnv("EVENT_AVSC", "Event.avsc")),
+		EventAvsc:               eventAvsc,
 		PublisherBatchSize:      env.GetEnvInt("PUBLISHER_BATCH_SIZE", 100),
 		PublisherNumGoroutines:  env.GetEnvInt("PUBLISHER_THREADS", 0), // use default 25 * GOMAXPROCS
 		PublisherMaxOutstanding: env.GetEnvInt("PUBLISHER_FLOW_CONTROL_MAX_OUTSTANDING_MESSAGES", 100),
@@ -55,7 +59,6 @@ func init() {
 		PublisherRetryTotal:     time.Duration(env.GetEnvFloat64("PUBLISHER_RETRY_TOTAL_TIMEOUT", 600) * float64(time.Second)),
 		Threads:                 env.GetEnvInt("EVENT_GENERATOR_THREADS", 200),
 		Timeout:                 time.Duration(env.GetEnvFloat64("EVENT_GENERATOR_RUNTIME", 5) * float64(time.Minute)),
-		Sleep:                   time.Duration(env.GetEnvFloat64("EVENT_GENERATOR_SLEEP_TIME", 0.2) * float64(time.Second)),
 	}
 	log.Printf("using config: %+v", Config)
 }

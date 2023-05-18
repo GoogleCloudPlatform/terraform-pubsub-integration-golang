@@ -18,8 +18,8 @@ package pubsub
 import (
 	"context"
 	"fmt"
-	"google/jss/up12/avro"
-	"google/jss/up12/pubsub/config"
+	"google/jss/pubsub-integration/avro"
+	"google/jss/pubsub-integration/pubsub/config"
 	"log"
 	"time"
 
@@ -40,6 +40,7 @@ var Service service = new(pubsubService)
 type pubsubService struct {
 }
 
+// NewClientBackoffConfig creates the default backoff config for pubsub client
 func NewClientBackoffConfig(initial time.Duration, max time.Duration) *pubsub.ClientConfig {
 	retryer := func() gax.Retryer {
 		return gax.OnCodes([]codes.Code{

@@ -3,5 +3,5 @@ go 1.20
 use (
 	./app/eventgen
 	./app/metrics
-	./app/up12
+	./app/pubsub-integration
 )

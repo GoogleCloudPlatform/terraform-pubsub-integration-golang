@@ -44,7 +44,7 @@ func GetEnvInt(name string, defaultValue int) int {
 	return result
 }
 
-// GetEnvInt gets integer value of the given environment variable name, and return default value if not exists
+// GetEnvFloat64 gets integer value of the given environment variable name, and return default value if not exists
 func GetEnvFloat64(name string, defaultValue float64) float64 {
 	value, exist := os.LookupEnv(name)
 	if !exist {

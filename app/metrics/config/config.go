@@ -16,8 +16,8 @@
 package config
 
 import (
-	"google/jss/up12/avro"
-	"google/jss/up12/env"
+	"google/jss/pubsub-integration/avro"
+	"google/jss/pubsub-integration/env"
 	"log"
 
 	"github.com/linkedin/goavro/v2"
@@ -38,11 +38,20 @@ type config struct {
 var Config config
 
 func init() {
+	eventAvsc, err := avro.NewCodedecFromFile(env.GetEnv("EVENT_AVSC", "Event.avsc"))
+	if err != nil {
+		log.Fatalf("fail to create event avro codec, err: %v", err)
+	}
+	metricsAvsc, err := avro.NewCodedecFromFile(env.GetEnv("METRICS_AVSC", "MetricsAck.avsc"))
+	if err != nil {
+		log.Fatalf("fail to create metrics avro codec, err: %v", err)
+	}
+
 	Config = config{
 		EventSubscription:        env.GetEnv("EVENT_SUBSCRIPTION", "EventSubscription"),
-		EventAvsc:                avro.NewCodedecFromFile(env.GetEnv("EVENT_AVSC", "Event.avsc")),
+		EventAvsc:                eventAvsc,
 		MetricsTopic:             env.GetEnv("METRICS_TOPIC", "MetricsTopic"),
-		MetricsAvsc:              avro.NewCodedecFromFile(env.GetEnv("METRICS_AVSC", "MetricsAck.avsc")),
+		MetricsAvsc:              metricsAvsc,
 		SubscriberNumGoroutines:  env.GetEnvInt("SUBSCRIBER_THREADS", 0), // use default 10
 		SubscriberMaxOutstanding: env.GetEnvInt("SUBSCRIBER_FLOW_CONTROL_MAX_OUTSTANDING_MESSAGES", 100),
 		PublisherBatchSize:       env.GetEnvInt("PUBLISHER_BATCH_SIZE", 100),
