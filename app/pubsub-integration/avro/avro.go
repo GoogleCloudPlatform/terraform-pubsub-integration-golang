@@ -24,7 +24,7 @@ import (
 	"github.com/linkedin/goavro/v2"
 )
 
-// NewCodedecFromFile creates codedec from avro schema file
+// NewCodedecFromFile creates codec from avro schema file
 func NewCodedecFromFile(path string) (*goavro.Codec, error) {
 	schema, err := os.ReadFile(path)
 	if err != nil {
@@ -37,18 +37,18 @@ func NewCodedecFromFile(path string) (*goavro.Codec, error) {
 	return codec, nil
 }
 
-// EncodeToJSON encodes data to JSON using given avro codedec
-func EncodeToJSON(codedec *goavro.Codec, data map[string]interface{}) ([]byte, error) {
-	json, err := codedec.TextualFromNative(nil, data)
+// EncodeToJSON encodes data to JSON using given avro codec
+func EncodeToJSON(codec *goavro.Codec, data map[string]interface{}) ([]byte, error) {
+	json, err := codec.TextualFromNative(nil, data)
 	if err != nil {
 		log.Println("fail to encode data=", data, "err=", err)
 	}
 	return json, err
 }
 
-// DecodeFromJSON decodes json using given avro codedec
-func DecodeFromJSON(codedec *goavro.Codec, json []byte) (map[string]interface{}, error) {
-	native, _, err := codedec.NativeFromTextual(json)
+// DecodeFromJSON decodes json using given avro codec
+func DecodeFromJSON(codec *goavro.Codec, json []byte) (map[string]interface{}, error) {
+	native, _, err := codec.NativeFromTextual(json)
 	if err != nil {
 		log.Println("fail to decode json=", json, "err=", err)
 		return nil, err

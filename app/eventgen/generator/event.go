@@ -57,5 +57,6 @@ func NewEvent() map[string]interface{} {
 		"avg_charge_rate_kw":   newAvgChargeRateKW(),
 		"battery_capacity_kwh": newBatteryCapacityKWH(),
 		"battery_level_start":  newBatteryLevelStart(),
+		"event_node":           config.Config.Node,
 	}
 }

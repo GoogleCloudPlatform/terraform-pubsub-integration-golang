@@ -17,6 +17,7 @@ package metrics
 
 import (
 	"google/jss/pubsub-integration/avro"
+	"google/jss/pubsub-integration/metrics/config"
 	"time"
 )
 
@@ -44,5 +45,7 @@ func New(event map[string]interface{}, publishTime time.Time, ackTime time.Time,
 		"avg_charge_rate_kw":   event["avg_charge_rate_kw"],
 		"battery_capacity_kwh": event["battery_capacity_kwh"],
 		"battery_level_start":  event["battery_level_start"],
+		"event_node":           event["event_node"],
+		"metrics_node":         config.Config.Node,
 	}, nil
 }
