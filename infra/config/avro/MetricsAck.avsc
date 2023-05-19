@@ -20,7 +20,7 @@
                 "type": "long",
                 "logicalType": "timestamp-micros"
             }
-        },        
+        },
         {
             "name": "publish_timestamp",
             "type": {
@@ -54,6 +54,14 @@
         {
             "name": "battery_level_start",
             "type": "float"
+        },
+        {
+            "name": "event_node",
+            "type": "string"
+        },
+        {
+            "name": "metrics_node",
+            "type": "string"
         }
     ]
 }
