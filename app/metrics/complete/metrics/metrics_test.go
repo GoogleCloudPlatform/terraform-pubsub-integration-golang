@@ -83,9 +83,9 @@ func TestMetricsAckAvroCodec(t *testing.T) {
 	m, err := New(event, publishTime, ackTime, processingTime)
 	assert.Nil(t, err)
 
-	json, err := avro.EncodeToJSON(config.Config.MetricsAvsc, m)
+	json, err := avro.EncodeToJSON(config.Config.MetricsCodec, m)
 	assert.Nil(t, err)
-	native, err := avro.DecodeFromJSON(config.Config.MetricsAvsc, json)
+	native, err := avro.DecodeFromJSON(config.Config.MetricsCodec, json)
 	assert.Nil(t, err)
 	assert.Equal(t, m, native)
 }

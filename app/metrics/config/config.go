@@ -19,15 +19,17 @@ import (
 	"google/jss/pubsub-integration/avro"
 	"google/jss/pubsub-integration/env"
 	"log"
+	"os"
 
 	"github.com/linkedin/goavro/v2"
 )
 
 type config struct {
-	EventAvsc                *goavro.Codec
+	Node                     string
+	EventCodec               *goavro.Codec
 	EventSubscription        string
 	MetricsTopic             string
-	MetricsAvsc              *goavro.Codec
+	MetricsCodec             *goavro.Codec
 	SubscriberNumGoroutines  int
 	SubscriberMaxOutstanding int
 	PublisherBatchSize       int
@@ -38,20 +40,26 @@ type config struct {
 var Config config
 
 func init() {
-	eventAvsc, err := avro.NewCodedecFromFile(env.GetEnv("EVENT_AVSC", "Event.avsc"))
+	hostName, err := os.Hostname()
+	if err != nil {
+		log.Fatalf("fail to get hostname, err: %v", err)
+	}
+
+	eventCodec, err := avro.NewCodedecFromFile(env.GetEnv("EVENT_AVSC", "Event.avsc"))
 	if err != nil {
 		log.Fatalf("fail to create event avro codec, err: %v", err)
 	}
-	metricsAvsc, err := avro.NewCodedecFromFile(env.GetEnv("METRICS_AVSC", "MetricsAck.avsc"))
+	metricsCodec, err := avro.NewCodedecFromFile(env.GetEnv("METRICS_AVSC", "MetricsAck.avsc"))
 	if err != nil {
 		log.Fatalf("fail to create metrics avro codec, err: %v", err)
 	}
 
 	Config = config{
+		Node:                     hostName,
 		EventSubscription:        env.GetEnv("EVENT_SUBSCRIPTION", "EventSubscription"),
-		EventAvsc:                eventAvsc,
+		EventCodec:               eventCodec,
 		MetricsTopic:             env.GetEnv("METRICS_TOPIC", "MetricsTopic"),
-		MetricsAvsc:              metricsAvsc,
+		MetricsCodec:             metricsCodec,
 		SubscriberNumGoroutines:  env.GetEnvInt("SUBSCRIBER_THREADS", 0), // use default 10
 		SubscriberMaxOutstanding: env.GetEnvInt("SUBSCRIBER_FLOW_CONTROL_MAX_OUTSTANDING_MESSAGES", 100),
 		PublisherBatchSize:       env.GetEnvInt("PUBLISHER_BATCH_SIZE", 100),

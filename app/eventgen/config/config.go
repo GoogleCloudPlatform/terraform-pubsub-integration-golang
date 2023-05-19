@@ -19,16 +19,18 @@ import (
 	"google/jss/pubsub-integration/avro"
 	"google/jss/pubsub-integration/env"
 	"log"
+	"os"
 	"time"
 
 	"github.com/linkedin/goavro/v2"
 )
 
 type config struct {
+	Node                    string
 	RESTPort                string
 	Location                string
 	EventTopic              string
-	EventAvsc               *goavro.Codec // codec is thread safe
+	EventCodec              *goavro.Codec // codec is thread safe
 	PublisherBatchSize      int
 	PublisherNumGoroutines  int
 	PublisherMaxOutstanding int
@@ -42,16 +44,21 @@ type config struct {
 var Config config
 
 func init() {
-	eventAvsc, err := avro.NewCodedecFromFile(env.GetEnv("EVENT_AVSC", "Event.avsc"))
+	hostName, err := os.Hostname()
+	if err != nil {
+		log.Fatalf("fail to get hostname, err: %v", err)
+	}
+	eventCodec, err := avro.NewCodedecFromFile(env.GetEnv("EVENT_AVSC", "Event.avsc"))
 	if err != nil {
 		log.Fatalf("fail to create event avro codec, err: %v", err)
 	}
 
 	Config = config{
+		Node:                    hostName,
 		RESTPort:                env.GetEnv("REST_PORT", "8001"),
 		Location:                env.GetEnv("GOOGLE_CLOUD_LOCATION", "west"),
 		EventTopic:              env.GetEnv("EVENT_TOPIC", "EventTopic"),
-		EventAvsc:               eventAvsc,
+		EventCodec:              eventCodec,
 		PublisherBatchSize:      env.GetEnvInt("PUBLISHER_BATCH_SIZE", 100),
 		PublisherNumGoroutines:  env.GetEnvInt("PUBLISHER_THREADS", 0), // use default 25 * GOMAXPROCS
 		PublisherMaxOutstanding: env.GetEnvInt("PUBLISHER_FLOW_CONTROL_MAX_OUTSTANDING_MESSAGES", 100),

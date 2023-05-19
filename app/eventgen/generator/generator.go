@@ -98,7 +98,7 @@ func Start(event publishers.NewMessage, numPublishers int, timeout time.Duration
 	if running != nil {
 		return errors.New("there is already an running generator")
 	}
-	g, err := newGenerator(config.Config.EventTopic, config.Config.EventAvsc, config.Config.PublisherBatchSize, config.Config.PublisherNumGoroutines, config.Config.PublisherMaxOutstanding)
+	g, err := newGenerator(config.Config.EventTopic, config.Config.EventCodec, config.Config.PublisherBatchSize, config.Config.PublisherNumGoroutines, config.Config.PublisherMaxOutstanding)
 	if err != nil {
 		return err
 	}

@@ -85,9 +85,9 @@ func TestNewEvent(t *testing.T) {
 // Create a message and make sure it’s valid JSON matching the Pub/Sub schema.
 func TestNewEventAvroCodec(t *testing.T) {
 	event := NewEvent()
-	json, err := avro.EncodeToJSON(config.Config.EventAvsc, event)
+	json, err := avro.EncodeToJSON(config.Config.EventCodec, event)
 	assert.Nil(t, err)
-	native, err := avro.DecodeFromJSON(config.Config.EventAvsc, json)
+	native, err := avro.DecodeFromJSON(config.Config.EventCodec, json)
 	assert.Nil(t, err)
 	assert.Equal(t, event, native)
 }

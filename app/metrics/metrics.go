@@ -32,9 +32,9 @@ func Start(ctx context.Context, metricsFactory Factory) error {
 	}
 	defer client.Close() // nolint: errcheck
 
-	sub := client.NewSubscription(config.Config.EventSubscription, config.Config.EventAvsc, config.Config.SubscriberNumGoroutines, config.Config.SubscriberMaxOutstanding)
+	sub := client.NewSubscription(config.Config.EventSubscription, config.Config.EventCodec, config.Config.SubscriberNumGoroutines, config.Config.SubscriberMaxOutstanding)
 
-	metricsTopic := client.NewTopic(config.Config.MetricsTopic, config.Config.MetricsAvsc, config.Config.PublisherBatchSize, config.Config.PublisherNumGoroutines, 0)
+	metricsTopic := client.NewTopic(config.Config.MetricsTopic, config.Config.MetricsCodec, config.Config.PublisherBatchSize, config.Config.PublisherNumGoroutines, 0)
 	defer metricsTopic.Stop()
 
 	handler := eventHandler(metricsTopic, metricsFactory)

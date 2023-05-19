@@ -15,32 +15,32 @@
 package simple_example
 
 import (
-	"fmt"
-	"testing"
-	"strings"
-	"strconv"
 	"errors"
-	"time"
+	"fmt"
 	"io/ioutil"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
 
+	"cloud.google.com/go/bigquery"
+	"cloud.google.com/go/pubsub"
+	"context"
+	"flag"
 	"github.com/GoogleCloudPlatform/cloud-foundation-toolkit/infra/blueprint-test/pkg/gcloud"
 	"github.com/GoogleCloudPlatform/cloud-foundation-toolkit/infra/blueprint-test/pkg/golden"
 	"github.com/GoogleCloudPlatform/cloud-foundation-toolkit/infra/blueprint-test/pkg/tft"
 	"github.com/parnurzeal/gorequest"
 	"github.com/stretchr/testify/assert"
-	"context"
-	"flag"
-	"path/filepath"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/metrics/pkg/client/clientset/versioned"
+	"google.golang.org/api/iterator"
 	"k8s.io/api/core/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"cloud.google.com/go/bigquery"
-	"google.golang.org/api/iterator"
-	"cloud.google.com/go/pubsub"
+	"k8s.io/metrics/pkg/client/clientset/versioned"
+	"path/filepath"
 )
 
 func TestSimpleExample(t *testing.T) {
@@ -141,9 +141,9 @@ func TestSimpleExample(t *testing.T) {
 
 		usSubClusterDeploymentName := strings.Join([]string{projectID, "subscriber-deployment", usSubClusterLocation}, "-")
 
-		imageHomeUrl :=	"gcr.io/aemon-projects-dev-000/"
-		publisherImageNameTag := "jss-psi-java-event-generator:latest"
-		subscriberAckImageNameTag := "jss-psi-java-metrics-ack:latest"
+		imageHomeUrl := "gcr.io/aemon-projects-dev-000/"
+		publisherImageNameTag := "jss-psi-golang-event-generator:latest"
+		subscriberAckImageNameTag := "jss-psi-golang-metrics-ack:latest"
 
 		// Printf all clusterContextName
 		fmt.Printf("euPubClusterContextName: %s\n", euPubClusterContextName)
@@ -167,7 +167,7 @@ func TestSimpleExample(t *testing.T) {
 		// Restart Publisher tasks
 		for _, externalLoadBalancer := range externalLoadBalancers {
 			externalLoadBalancerIPAddress := externalLoadBalancer.Get("IPAddress").String()
-			payload := `{"executionTime": 5, "thread": 5}`
+			payload := `{"runTime": 5, "threads": 12}`
 			RestartPublisher(t, assert, externalLoadBalancerIPAddress, payload)
 		}
 
@@ -178,24 +178,32 @@ func TestSimpleExample(t *testing.T) {
 		var usPubTotalCPU int64 = 0
 		var cpuLimit int64 = 2000000000
 		time.Sleep(30 * time.Second)
-		wait.PollImmediate(1 * time.Second, monitorTime, func() (bool, error) {
+		wait.PollImmediate(1*time.Second, monitorTime, func() (bool, error) {
 			euPubNodeMetricses, err := euPubVersionedClientset.MetricsV1beta1().NodeMetricses().List(context.TODO(), metaV1.ListOptions{})
 			usPubNodeMetricses, err := usPubVersionedClientset.MetricsV1beta1().NodeMetricses().List(context.TODO(), metaV1.ListOptions{})
 			assert.NoError(err)
 
 			if euPubTotalCPU == 0 {
-				euPubNode, err := euPubClientset.CoreV1().Nodes().Get(context.TODO(), euPubNodeMetricses.Items[1].Name, metaV1.GetOptions{})
-				assert.NoError(err)
-				euPubTotalCPU = euPubNode.Status.Allocatable.Cpu().AsDec().UnscaledBig().Int64() * 1000000
+				if len(euPubNodeMetricses.Items) < 2 {
+					euPubTotalCPU = int64(1930000000)
+				} else {
+					euPubNode, err := euPubClientset.CoreV1().Nodes().Get(context.TODO(), euPubNodeMetricses.Items[1].Name, metaV1.GetOptions{})
+					assert.NoError(err)
+					euPubTotalCPU = euPubNode.Status.Allocatable.Cpu().AsDec().UnscaledBig().Int64() * 1000000
+				}
 			}
 			if usPubTotalCPU == 0 {
-				usPubNode, err := usPubClientset.CoreV1().Nodes().Get(context.TODO(), usPubNodeMetricses.Items[1].Name, metaV1.GetOptions{})
-				assert.NoError(err)
-				usPubTotalCPU = usPubNode.Status.Allocatable.Cpu().AsDec().UnscaledBig().Int64() * 1000000
+				if len(usPubNodeMetricses.Items) < 2 {
+					usPubTotalCPU = int64(1930000000)
+				} else {
+					usPubNode, err := usPubClientset.CoreV1().Nodes().Get(context.TODO(), usPubNodeMetricses.Items[1].Name, metaV1.GetOptions{})
+					assert.NoError(err)
+					usPubTotalCPU = usPubNode.Status.Allocatable.Cpu().AsDec().UnscaledBig().Int64() * 1000000
+				}
 			}
 
 			for _, euPubNodeMetrics := range euPubNodeMetricses.Items {
-				if strings.Contains(euPubNodeMetrics.Name, "publisher-java-pool") {
+				if strings.Contains(euPubNodeMetrics.Name, "publisher-golang-pool") {
 					euPubCPUMilliUsage := euPubNodeMetrics.Usage.Cpu().AsDec().UnscaledBig().Int64()
 					assert.Less(euPubCPUMilliUsage, cpuLimit, "EU Pub CPU Milli Usage should be less than 2000000000")
 					euCPUUsagePercentage := (float64(euPubCPUMilliUsage) / float64(euPubTotalCPU)) * 100
@@ -205,7 +213,7 @@ func TestSimpleExample(t *testing.T) {
 			}
 
 			for _, usPubNodeMetrics := range usPubNodeMetricses.Items {
-				if strings.Contains(usPubNodeMetrics.Name, "publisher-java-pool") {
+				if strings.Contains(usPubNodeMetrics.Name, "publisher-golang-pool") {
 					usPubCPUMilliUsage := usPubNodeMetrics.Usage.Cpu().AsDec().UnscaledBig().Int64()
 					assert.Less(usPubCPUMilliUsage, cpuLimit, "US Pub CPU Milli Usage should be less than 2000000000")
 					usCPUUsagePercentage := (float64(usPubCPUMilliUsage) / float64(usPubTotalCPU)) * 100
@@ -329,7 +337,7 @@ func TestSimpleExample(t *testing.T) {
 
 					// Assert container image
 					euPubExpectedImage := imageHomeUrl + publisherImageNameTag
-					assert.Equal(container.Image, euPubExpectedImage, "expected container image to be " + euPubExpectedImage)
+					assert.Equal(container.Image, euPubExpectedImage, "expected container image to be "+euPubExpectedImage)
 				}
 			}
 		}
@@ -429,7 +437,7 @@ func TestSimpleExample(t *testing.T) {
 
 					// Assert container image
 					usPubExpectedImage := imageHomeUrl + publisherImageNameTag
-					assert.Equal(container.Image, usPubExpectedImage, "expected container image to be " + usPubExpectedImage)
+					assert.Equal(container.Image, usPubExpectedImage, "expected container image to be "+usPubExpectedImage)
 				}
 			}
 		}
@@ -527,7 +535,7 @@ func TestSimpleExample(t *testing.T) {
 
 					// Assert container image
 					usSubExpectedImage := imageHomeUrl + subscriberAckImageNameTag
-					assert.Equal(container.Image, usSubExpectedImage, "expected container image to be " + usSubExpectedImage)
+					assert.Equal(container.Image, usSubExpectedImage, "expected container image to be "+usSubExpectedImage)
 				}
 			}
 		}
@@ -535,26 +543,26 @@ func TestSimpleExample(t *testing.T) {
 		// Restart publisher tasks
 		for _, externalLoadBalancer := range externalLoadBalancers {
 			externalLoadBalancerIPAddress := externalLoadBalancer.Get("IPAddress").String()
-			payload := `{"executionTime": 0.5, "thread": 5}`
+			payload := `{"runTime": 0.5, "threads": 5}`
 			RestartPublisher(t, assert, externalLoadBalancerIPAddress, payload)
 		}
 
 		// Check BigQuery table data
 		fmt.Printf("Checking BigQuery table data\n")
 		bqTableId := example.GetStringOutput("bq_table_id")
-		// query interval is 30 seconds
-		queryTimeDuration := 30 * time.Second
+		// query interval is 3 minutes
+		queryTimeDuration := 3 * time.Minute
 		ackStart := time.Now()
 		ackStartTime := ackStart.Format("2006-01-02 15:04:05")
 		ackEndTime := ackStart.Add(queryTimeDuration).Format("2006-01-02 15:04:05")
-		// Wait for 30 seconds
-		fmt.Printf("Waiting for 30 seconds, from %s to %s\n", ackStartTime, ackEndTime)
-		time.Sleep(30 * time.Second)
+		// Wait for 3 minutes
+		fmt.Printf("Waiting for 3 minutes, from %s to %s\n", ackStartTime, ackEndTime)
+		time.Sleep(queryTimeDuration)
 		// Query BigQuery table
 		ackDataCount, err := CountQueryAckFromBigquery(projectID, bqTableId, ackStartTime, ackEndTime)
 		assert.NoError(err)
 		fmt.Printf("BigQuery result: %d\n", ackDataCount)
-		assert.Greater(ackDataCount, int64(0), "expected dataCount to be greater than 0 when image is " + subscriberAckImageNameTag)
+		assert.Greater(ackDataCount, int64(0), "expected dataCount to be greater than 0 when image is "+subscriberAckImageNameTag)
 
 		// Stop publisher tasks
 		for _, externalLoadBalancer := range externalLoadBalancers {
@@ -563,9 +571,9 @@ func TestSimpleExample(t *testing.T) {
 		}
 
 		// Update subscriber Deployment's image to Nack
-		subscriberNackImageNameTag := "jss-psi-java-metrics-nack:latest"
-		fmt.Printf("Updating Deployment's image to %s\n", imageHomeUrl + subscriberNackImageNameTag)
-		err = UpdateDeploymentImage(usSubClientset, usSubClusterNamespace, usSubClusterDeploymentName, imageHomeUrl + subscriberNackImageNameTag)
+		subscriberNackImageNameTag := "jss-psi-golang-metrics-nack:latest"
+		fmt.Printf("Updating Deployment's image to %s\n", imageHomeUrl+subscriberNackImageNameTag)
+		err = UpdateDeploymentImage(usSubClientset, usSubClusterNamespace, usSubClusterDeploymentName, imageHomeUrl+subscriberNackImageNameTag)
 		assert.NoError(err)
 		// Wait for Deployment to be updated
 		fmt.Printf("Waiting for Deployment to be updated\n")
@@ -576,7 +584,7 @@ func TestSimpleExample(t *testing.T) {
 		// Start publisher tasks
 		for _, externalLoadBalancer := range externalLoadBalancers {
 			externalLoadBalancerIPAddress := externalLoadBalancer.Get("IPAddress").String()
-			payload := `{"executionTime": 0.5, "thread": 5}`
+			payload := `{"runTime": 0.5, "threads": 5}`
 			StartPublisher(t, assert, externalLoadBalancerIPAddress, payload)
 		}
 
@@ -585,14 +593,14 @@ func TestSimpleExample(t *testing.T) {
 		nackStart := time.Now()
 		nackStartTime := nackStart.Format("2006-01-02 15:04:05")
 		nackEndTime := nackStart.Add(queryTimeDuration).Format("2006-01-02 15:04:05")
-		// Wait for 30 seconds
-		fmt.Printf("Waiting for 30 seconds, from %s to %s\n", nackStartTime, nackEndTime)
-		time.Sleep(30 * time.Second)
+		// Wait for 3 minutes
+		fmt.Printf("Waiting for 3 minutes, from %s to %s\n", nackStartTime, nackEndTime)
+		time.Sleep(queryTimeDuration)
 		// Query BigQuery table
 		nackDataCount, err := CountQueryAckFromBigquery(projectID, bqTableId, nackStartTime, nackEndTime)
 		assert.NoError(err)
 		fmt.Printf("BigQuery result: %d\n", nackDataCount)
-		assert.Equal(nackDataCount, int64(0), "expected dataCount is 0 when image is " + subscriberNackImageNameTag)
+		assert.Equal(nackDataCount, int64(0), "expected dataCount is 0 when image is "+subscriberNackImageNameTag)
 
 		// Stop publisher tasks
 		for _, externalLoadBalancer := range externalLoadBalancers {
@@ -610,9 +618,9 @@ func TestSimpleExample(t *testing.T) {
 		assert.NoError(err)
 		avroSourceStr := strings.Replace(string(avscSource), "MetricsComplete", "MetricsAck", -1)
 		// Create a schema revision
-		schemaConfig := pubsub.SchemaConfig {
-			Name: 		fmt.Sprintf("projects/%s/schemas/%s", projectID, metricsSchemaName),
-			Type: 		pubsub.SchemaAvro,
+		schemaConfig := pubsub.SchemaConfig{
+			Name:       fmt.Sprintf("projects/%s/schemas/%s", projectID, metricsSchemaName),
+			Type:       pubsub.SchemaAvro,
 			Definition: avroSourceStr,
 		}
 		schema, err := schemaClient.CommitSchema(context.Background(), metricsSchemaName, schemaConfig)
@@ -620,9 +628,9 @@ func TestSimpleExample(t *testing.T) {
 		assert.NotEmpty(schema)
 
 		// Update subscriber Deployment's image to Complete
-		subscriberCompleteImageNameTag := "jss-psi-java-metrics-complete:latest"
-		fmt.Printf("Updating Deployment's image to %s\n", imageHomeUrl + subscriberCompleteImageNameTag)
-		err = UpdateDeploymentImage(usSubClientset, usSubClusterNamespace, usSubClusterDeploymentName, imageHomeUrl + subscriberCompleteImageNameTag)
+		subscriberCompleteImageNameTag := "jss-psi-golang-metrics-complete:latest"
+		fmt.Printf("Updating Deployment's image to %s\n", imageHomeUrl+subscriberCompleteImageNameTag)
+		err = UpdateDeploymentImage(usSubClientset, usSubClusterNamespace, usSubClusterDeploymentName, imageHomeUrl+subscriberCompleteImageNameTag)
 		assert.NoError(err)
 		// Wait for Deployment to be updated
 		fmt.Printf("Waiting for Deployment to be updated\n")
@@ -632,7 +640,7 @@ func TestSimpleExample(t *testing.T) {
 		// Start publisher tasks
 		for _, externalLoadBalancer := range externalLoadBalancers {
 			externalLoadBalancerIPAddress := externalLoadBalancer.Get("IPAddress").String()
-			payload := `{"executionTime": 0.5, "thread": 5}`
+			payload := `{"runTime": 0.5, "threads": 5}`
 			StartPublisher(t, assert, externalLoadBalancerIPAddress, payload)
 		}
 
@@ -641,14 +649,14 @@ func TestSimpleExample(t *testing.T) {
 		completeStart := time.Now()
 		completeStartTime := completeStart.Format("2006-01-02 15:04:05")
 		completeEndTime := completeStart.Add(queryTimeDuration).Format("2006-01-02 15:04:05")
-		// Wait for 30 seconds
-		fmt.Printf("Waiting for 30 seconds, from %s to %s\n", completeStartTime, completeEndTime)
-		time.Sleep(30 * time.Second)
+		// Wait for 3 minutes
+		fmt.Printf("Waiting for 3 minutes, from %s to %s\n", completeStartTime, completeEndTime)
+		time.Sleep(queryTimeDuration)
 		// Query BigQuery table
 		completeDataCount, err := CountQueryCompleteFromBigquery(projectID, bqTableId, completeStartTime, completeEndTime)
 		assert.NoError(err)
 		fmt.Printf("BigQuery result: %d\n", completeDataCount)
-		assert.Greater(ackDataCount, int64(0), "expected dataCount to be greater than 0 when image is " + subscriberCompleteImageNameTag)
+		assert.Greater(ackDataCount, int64(0), "expected dataCount to be greater than 0 when image is "+subscriberCompleteImageNameTag)
 	})
 
 	example.Test()
@@ -673,7 +681,7 @@ func ClusterStatusAndConfigCheck(t *testing.T, assert *assert.Assertions, cluste
 }
 
 // Get k8s config
-func GetKubeConfg() (*string) {
+func GetKubeConfg() *string {
 	var kubeConfig *string
 	if home := homedir.HomeDir(); home != "" {
 		kubeConfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
@@ -723,7 +731,7 @@ func PrintEnvContent(envName string, envValue string) {
 }
 
 // Update Deployment's image
-func UpdateDeploymentImage(clientset *kubernetes.Clientset, clusterNamespace string, deploymentName string, image string) (error) {
+func UpdateDeploymentImage(clientset *kubernetes.Clientset, clusterNamespace string, deploymentName string, image string) error {
 	deployment, err := clientset.AppsV1().Deployments(clusterNamespace).Get(context.Background(), deploymentName, metaV1.GetOptions{})
 	if err != nil {
 		return err
@@ -737,7 +745,7 @@ func UpdateDeploymentImage(clientset *kubernetes.Clientset, clusterNamespace str
 func WaitForDeploymentToBeUpdated(clientset *kubernetes.Clientset, namespace string, deploymentName string, timeout time.Duration) error {
 	// Sleep 10 seconds for waiting revision to be created
 	time.Sleep(10 * time.Second)
-	return wait.PollImmediate(1 * time.Second, timeout, func() (bool, error) {
+	return wait.PollImmediate(1*time.Second, timeout, func() (bool, error) {
 		deployment, err := clientset.AppsV1().Deployments(namespace).Get(context.Background(), deploymentName, metaV1.GetOptions{})
 		if err != nil {
 			return false, err
@@ -762,7 +770,7 @@ func CountQueryAckFromBigquery(projectID string, bqTableId string, startTime str
 	defer client.Close()
 
 	query := client.Query(
-			`SELECT
+		`SELECT
 				count(*) as dataCount
 			FROM ` + bqTableId + `
 			WHERE
@@ -797,7 +805,7 @@ func CountQueryCompleteFromBigquery(projectID string, bqTableId string, startTim
 	defer client.Close()
 
 	query := client.Query(
-			`SELECT
+		`SELECT
 				count(*) as dataCount
 			FROM ` + bqTableId + `
 			WHERE
@@ -842,7 +850,7 @@ func StopPublisher(t *testing.T, assert *assert.Assertions, externalLoadBalancer
 }
 
 func StartPublisher(t *testing.T, assert *assert.Assertions, externalLoadBalancerIPAddress string, payload string) {
-	// payload: {times int, thread int, sleep float, executionTime float}
+	// payload: {threads int, runTime float}
 	startupApiUrl := "http://" + externalLoadBalancerIPAddress + "/api/msg/random"
 	fmt.Printf("Sending Http POST request to : %s, payload: %s\n", startupApiUrl, payload)
 	request := gorequest.New().Timeout(20 * time.Second)
