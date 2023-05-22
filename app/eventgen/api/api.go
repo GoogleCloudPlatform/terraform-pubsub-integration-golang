@@ -41,22 +41,22 @@ func responseError(c *gin.Context, statusCode int, err error) {
 // GeneratorReq holds the request parameter for generating event
 type GeneratorReq struct {
 	Threads int     `form:"threads"`
-	RunTime float64 `form:"runTime"` // in minutes
+	Runtime float64 `form:"runtime"` // in minutes
 }
 
 func random(c *gin.Context) {
 	log.Printf("start to generate event")
 	req := GeneratorReq{
 		Threads: config.Config.Threads,
-		RunTime: config.Config.Timeout.Minutes(),
+		Runtime: config.Config.Timeout.Minutes(),
 	}
-	if err := c.BindQuery(&req); err != nil {
+	if err := c.Bind(&req); err != nil {
 		log.Printf("bad request parameters, err: %v", err)
 		response(c, http.StatusBadRequest, nil)
 		return
 	}
 	log.Printf("request parameters: %+v", req)
-	timeout := time.Duration(req.RunTime * float64(time.Minute))
+	timeout := time.Duration(req.Runtime * float64(time.Minute))
 	if err := generator.Start(generator.NewEvent, req.Threads, timeout); err != nil {
 		responseError(c, http.StatusBadRequest, err)
 	}

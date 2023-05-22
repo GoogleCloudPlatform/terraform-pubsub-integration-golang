@@ -44,6 +44,8 @@ type config struct {
 var Config config
 
 func init() {
+	log.SetOutput(os.Stdout)
+
 	hostName, err := os.Hostname()
 	if err != nil {
 		log.Fatalf("fail to get hostname, err: %v", err)
