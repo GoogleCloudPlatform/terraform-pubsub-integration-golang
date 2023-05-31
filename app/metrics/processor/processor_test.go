@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package generator creates event message and publish to event topic
-package metrics
+package processor
 
 import (
 	"testing"
