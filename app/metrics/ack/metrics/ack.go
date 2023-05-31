@@ -12,20 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package main is the entry point of MetricsAck.
-package main
+// Package metrics generate ack metrics from event.
+package metrics
 
 import (
-	"context"
-	"google/jss/pubsub-integration/metrics/ack/metrics"
-	"google/jss/pubsub-integration/metrics/processor"
-
-	"log"
+	"google/jss/pubsub-integration/metrics"
+	"time"
 )
 
-func main() {
-	ctx := context.Background()
-	if err := processor.Start(ctx, metrics.New); err != nil {
-		log.Fatalf("fail to start metircs ack, err: %v", err)
-	}
+// New creates ack metrics from given event message, It is just the same with the metrics.New().
+// Redeclared here for clarity and test purpose.
+func New(event map[string]interface{}, publishTime time.Time, ackTime time.Time, processingTime time.Duration) (map[string]interface{}, error) {
+	return metrics.New(event, publishTime, ackTime, processingTime)
 }

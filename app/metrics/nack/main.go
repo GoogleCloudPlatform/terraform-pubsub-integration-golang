@@ -18,14 +18,14 @@ package main
 import (
 	"context"
 	"errors"
-	"google/jss/pubsub-integration/metrics"
+	"google/jss/pubsub-integration/metrics/processor"
 	"log"
 	"time"
 )
 
 func main() {
 	ctx := context.Background()
-	if err := metrics.Start(ctx, newNackMetrics); err != nil {
+	if err := processor.Start(ctx, newNackMetrics); err != nil {
 		log.Fatalf("fail to start metircs nack, err: %v", err)
 	}
 }

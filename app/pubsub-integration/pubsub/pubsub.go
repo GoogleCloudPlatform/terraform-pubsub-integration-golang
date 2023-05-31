@@ -150,8 +150,11 @@ func (t *pubsubTopic) Publish(ctx context.Context, data map[string]interface{}) 
 	msg := &pubsub.Message{
 		Data: json,
 	}
+	now := time.Now()
 	result := t.topic.Publish(ctx, msg)
 	id, err := result.Get(ctx)
+	elapsed := time.Since(now)
+	log.Printf("publish message id: %v, elapsed: %v", id, elapsed)
 	if err != nil {
 		return id, fmt.Errorf("fail to publish message: %v to topic: %v, err: %w", json, t.topic, err)
 	}

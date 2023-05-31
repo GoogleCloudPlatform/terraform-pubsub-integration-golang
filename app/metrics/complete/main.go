@@ -17,14 +17,14 @@ package main
 
 import (
 	"context"
-	"google/jss/pubsub-integration/metrics"
-	completeMetrics "google/jss/pubsub-integration/metrics/complete/metrics"
+	"google/jss/pubsub-integration/metrics/complete/metrics"
+	"google/jss/pubsub-integration/metrics/processor"
 	"log"
 )
 
 func main() {
 	ctx := context.Background()
-	if err := metrics.Start(ctx, completeMetrics.New); err != nil {
+	if err := processor.Start(ctx, metrics.New); err != nil {
 		log.Fatalf("fail to start metircs complete, err: %v", err)
 	}
 }

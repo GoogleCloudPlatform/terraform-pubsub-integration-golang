@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package metrics generate complete metrics
+// Package metrics generate complete metrics from event.
 package metrics
 
 import (
 	"google/jss/pubsub-integration/avro"
-	"google/jss/pubsub-integration/metrics/ack/metrics"
+	"google/jss/pubsub-integration/metrics"
 	"time"
 )
 

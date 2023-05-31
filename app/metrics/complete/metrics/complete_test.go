@@ -18,8 +18,8 @@ package metrics
 import (
 	"google/jss/pubsub-integration/avro"
 	"google/jss/pubsub-integration/eventgen/generator"
-	"google/jss/pubsub-integration/metrics"
 	"google/jss/pubsub-integration/metrics/config"
+	"google/jss/pubsub-integration/metrics/processor"
 	"testing"
 	"time"
 
@@ -30,7 +30,7 @@ import (
 func TestMetricsComplete(t *testing.T) {
 	event := generator.NewEvent()
 	publishTime := time.Now()
-	processingTime := metrics.ProcessingTime()
+	processingTime := processor.ProcessingTime()
 	ackTime := publishTime.Add(processingTime)
 	m, err := New(event, publishTime, ackTime, processingTime)
 	assert.Nil(t, err)
@@ -78,7 +78,7 @@ func TestMetricsComplete(t *testing.T) {
 func TestMetricsAckAvroCodec(t *testing.T) {
 	event := generator.NewEvent()
 	publishTime := time.Now()
-	processingTime := metrics.ProcessingTime()
+	processingTime := processor.ProcessingTime()
 	ackTime := publishTime.Add(processingTime)
 	m, err := New(event, publishTime, ackTime, processingTime)
 	assert.Nil(t, err)
