@@ -40,7 +40,7 @@ var Service service = new(pubsubService)
 type pubsubService struct {
 }
 
-// NewClientBackoffConfig creates the default backoff config for pubsub client
+// NewClientBackoffConfig creates the default backoff config for Cloud Pub/Sub client
 func NewClientBackoffConfig(initial time.Duration, max time.Duration) *pubsub.ClientConfig {
 	retryer := func() gax.Retryer {
 		return gax.OnCodes([]codes.Code{
@@ -73,7 +73,7 @@ func (*pubsubService) NewClient(ctx context.Context, clientCfg *pubsub.ClientCon
 	return &pubsubClient{client: client}, err
 }
 
-// Client is the interface of the pubsub client for pubsub handling.
+// Client is the interface of the Cloud Pub/Sub client for Pub/Sub handling.
 type Client interface {
 	NewTopic(string, *goavro.Codec, int, int, int) Topic
 	NewSubscription(string, *goavro.Codec, int, int) *Subscription
@@ -189,7 +189,7 @@ type Message struct {
 // Receive starts to receive messages and handle them by given message handler
 func (sub *Subscription) Receive(ctx context.Context, handler MessageHandler) error {
 	return sub.subscription.Receive(ctx, func(ctx context.Context, pubsubMessage *pubsub.Message) {
-		log.Printf("got pubsub message ID: %v", pubsubMessage.ID)
+		log.Printf("got Cloud Pub/Sub message ID: %v", pubsubMessage.ID)
 		data, err := avro.DecodeFromJSON(sub.codec, pubsubMessage.Data)
 		if err != nil {
 			log.Printf("failed to check schema, message: %v, ", pubsubMessage.ID)

@@ -41,7 +41,7 @@ func newGenerator(topicID string, codec *goavro.Codec, batchSize int, numGorouti
 	backoff := pubsub.NewClientBackoffConfig(config.Config.PublisherRetryInit, config.Config.PublisherRetryTotal)
 	client, err := pubsub.Service.NewClient(context.Background(), backoff)
 	if err != nil {
-		log.Printf("fail to connect to pubsub, err: %v", err)
+		log.Printf("fail to connect to Cloud Pub/Sub, err: %v", err)
 		return nil, err
 	}
 	g.client = client
@@ -78,7 +78,7 @@ func (g *generator) Stop() {
 func (g *generator) release() {
 	g.topic.Stop()
 	if err := g.client.Close(); err != nil {
-		log.Printf("fail to close pubsub client, err: %v", err)
+		log.Printf("fail to close Cloud Pub/Sub client, err: %v", err)
 	}
 	mux.Lock()
 	defer mux.Unlock()
