@@ -134,7 +134,7 @@ func runPublisher(ctx context.Context, name string, publishers *Publishers) *pub
 	return pbr
 }
 
-// run publisher unitl ctx done
+// run starts to run the publisher unitl ctx done
 func (pbr *publisher) run(ctx context.Context) {
 	var pbrCtx context.Context
 	if pbr.timeout > 0 {
@@ -143,6 +143,7 @@ func (pbr *publisher) run(ctx context.Context) {
 		pbrCtx, pbr.cancel = context.WithCancel(ctx)
 	}
 
+	// Create new thread to publish until pbrCtx done
 	go func() {
 		defer pbr.finish()
 		log.Printf("%v: started", pbr.name)

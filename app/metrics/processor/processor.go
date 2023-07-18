@@ -33,12 +33,18 @@ func Start(ctx context.Context, factory metrics.Factory) error {
 	}
 	defer client.Close() // nolint: errcheck
 
+	// The subscription to receive event
 	sub := client.NewSubscription(config.Config.EventSubscription, config.Config.EventCodec, config.Config.SubscriberNumGoroutines, config.Config.SubscriberMaxOutstanding)
 
+	// The topic to publish the metrics converted from received event
 	metricsTopic := client.NewTopic(config.Config.MetricsTopic, config.Config.MetricsCodec, config.Config.PublisherBatchSize, config.Config.PublisherNumGoroutines, 0)
 	defer metricsTopic.Stop()
 
+	// The handler to handles the received event, generate and publish metrics to the metrics topic
 	handler := eventHandler(metricsTopic, factory)
+
+	// Start to handle received event using given handler.
+	// It does not return until the context is done or an non-retryable error occurs
 	if err := sub.Receive(ctx, handler); err != nil {
 		return err
 	}
@@ -46,7 +52,12 @@ func Start(ctx context.Context, factory metrics.Factory) error {
 	return nil
 }
 
+// eventHandler creates the event message handler for subscriber to handle the received event
+// The handler receives event message and generates metrics using the given metrics factory
+// It acks the message and publishes the metrics to the metrics topic if it generates metrics successfully or nacks if it does not
 func eventHandler(metricsTopic pubsub.Topic, factory metrics.Factory) pubsub.MessageHandler {
+	// factory: the metrics factory to generate metrics from the received event
+
 	return func(ctx context.Context, message *pubsub.Message) {
 		log.Printf("processing event ID: %v, data: %v", message.ID, message.Data)
 
@@ -79,7 +90,8 @@ const processTimeMax = 0.3
 const processTimeMean = (proesssTimeMin + processTimeMax) / 2
 const processTimeStdDev = (processTimeMax - processTimeMean) / 3.29 // 3.29 is the z-score for 99.9% confidence interval
 
-// ProcessingTime returns a normal distributed random processing time between 0.1 and 0.5 seconds and 99.9% of the time between 0.1 and 0.3 seconds
+// ProcessingTime returns a normal distributed random processing time to simulate the time used to process an event
+// It is between 0.1 and 0.5 seconds and 99.9% of the time between 0.1 and 0.3 seconds
 func ProcessingTime() time.Duration {
 	for {
 		seconds := random.NormFloat64()*processTimeStdDev + processTimeMean

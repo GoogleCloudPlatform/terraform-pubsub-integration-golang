@@ -35,6 +35,7 @@ type generator struct {
 	cancel     context.CancelFunc
 }
 
+// newGenerator initializes the Cloud Pub/Sub client and topic of the generator
 func newGenerator(topicID string, codec *goavro.Codec, batchSize int, numGoroutines int, maxOutstanding int) (*generator, error) {
 	var g generator
 
@@ -50,6 +51,7 @@ func newGenerator(topicID string, codec *goavro.Codec, batchSize int, numGorouti
 	return &g, nil
 }
 
+// Run creates the publisher group and starts to publish events
 func (g *generator) Run(event publishers.NewMessage, numPublishers int, timeout time.Duration) {
 	log.Printf("run event generator with numPublishers: %v, timeout: %v", numPublishers, timeout)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -59,6 +61,7 @@ func (g *generator) Run(event publishers.NewMessage, numPublishers int, timeout 
 	pbrs.Add(ctx, numPublishers)
 	g.publishers = pbrs
 
+	// Wait for all publishers to finish and release resources in another thread
 	go func() {
 		pbrs.WaitFinish()
 		g.release()
@@ -75,6 +78,7 @@ func (g *generator) Stop() {
 	}
 }
 
+// release stops the topic and close the Cloud Pub/Sub client
 func (g *generator) release() {
 	g.topic.Stop()
 	if err := g.client.Close(); err != nil {

@@ -42,6 +42,9 @@ type pubsubService struct {
 
 // NewClientBackoffConfig creates the default backoff config for Cloud Pub/Sub client
 func NewClientBackoffConfig(initial time.Duration, max time.Duration) *pubsub.ClientConfig {
+	// initial: the initial value of the retry period
+	// max: the maximum value of the retry period
+
 	retryer := func() gax.Retryer {
 		return gax.OnCodes([]codes.Code{
 			codes.Aborted,
@@ -141,8 +144,12 @@ type pubsubTopic struct {
 	codec *goavro.Codec
 }
 
-// Publish publishing message to the topic
+// Publish encodes the message data with avro schema, publishes and waits for the publish result
+// Publish returns the server-generated message ID and/or error result of a Publish call.
 func (t *pubsubTopic) Publish(ctx context.Context, data map[string]interface{}) (string, error) {
+	// data: the message data to be published should comply with the avro schema of the topic
+
+	// Encode message data by the avro schema of the topic
 	json, err := avro.EncodeToJSON(t.codec, data)
 	if err != nil {
 		return "", fmt.Errorf("ignore invalid message: %v", data)
@@ -151,7 +158,9 @@ func (t *pubsubTopic) Publish(ctx context.Context, data map[string]interface{}) 
 		Data: json,
 	}
 	now := time.Now()
+	// Publish the encoded message to the topic
 	result := t.topic.Publish(ctx, msg)
+	// Wait and get the result of publishing
 	id, err := result.Get(ctx)
 	elapsed := time.Since(now)
 	log.Printf("publish message id: %v, elapsed: %v", id, elapsed)
@@ -186,8 +195,13 @@ type Message struct {
 	Data map[string]interface{}
 }
 
-// Receive starts to receive messages and handle them by given message handler
+// Receive starts to receive messages.
+// It receives and decodes the message by the avro schema, and then calls the given handler callback to process the message
+// It blocks until ctx is done, or the service returns a non-retryable error
+// The way to terminate a Receive is to cancel its context
 func (sub *Subscription) Receive(ctx context.Context, handler MessageHandler) error {
+	// handler: the callback function to handle the received message
+
 	return sub.subscription.Receive(ctx, func(ctx context.Context, pubsubMessage *pubsub.Message) {
 		log.Printf("got Cloud Pub/Sub message ID: %v", pubsubMessage.ID)
 		data, err := avro.DecodeFromJSON(sub.codec, pubsubMessage.Data)
