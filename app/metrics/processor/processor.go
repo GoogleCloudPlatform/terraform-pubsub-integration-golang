@@ -44,12 +44,21 @@ func Start(ctx context.Context, factory metrics.Factory) error {
 	handler := eventHandler(metricsTopic, factory)
 
 	// Start to handle received event using given handler.
-	// It does not return until the context is done or an non-retryable error occurs
-	if err := sub.Receive(ctx, handler); err != nil {
-		return err
+	// It does not return until the context is done
+	for {
+		if err := sub.Receive(ctx, handler); err != nil {
+			log.Printf("sub.Receive: %v", err)
+		}
+		select {
+		case <-ctx.Done():
+			log.Printf("context done, subscriber stopped")
+			return nil
+		default:
+			waitTime := 30 * time.Second
+			log.Printf("waiting %v for retry", waitTime)
+			time.Sleep(waitTime)
+		}
 	}
-	log.Println("end of event receiving")
-	return nil
 }
 
 // eventHandler creates the event message handler for subscriber to handle the received event
