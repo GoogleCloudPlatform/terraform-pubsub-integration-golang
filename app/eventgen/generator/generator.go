@@ -35,7 +35,7 @@ type generator struct {
 	cancel     context.CancelFunc
 }
 
-// newGenerator initializes the Cloud Pub/Sub client and topic of the generator
+// Initializes the Cloud Pub/Sub client and the topic for event generator
 func newGenerator(topicID string, codec *goavro.Codec, batchSize int, numGoroutines int, maxOutstanding int) (*generator, error) {
 	var g generator
 
@@ -51,7 +51,7 @@ func newGenerator(topicID string, codec *goavro.Codec, batchSize int, numGorouti
 	return &g, nil
 }
 
-// Run creates the publisher group and starts to publish events
+// Creates the publisher group and starts to publish events
 func (g *generator) Run(event publishers.NewMessage, numPublishers int, timeout time.Duration) {
 	log.Printf("run event generator with numPublishers: %v, timeout: %v", numPublishers, timeout)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -61,24 +61,24 @@ func (g *generator) Run(event publishers.NewMessage, numPublishers int, timeout 
 	pbrs.Add(ctx, numPublishers)
 	g.publishers = pbrs
 
-	// Wait for all publishers to finish and release resources in another thread
+	// Wait for all publishers to finish and then release the resources in another thread
 	go func() {
 		pbrs.WaitFinish()
 		g.release()
 	}()
 }
 
-// Stop stops the generator and release resources
+// Stops the event generator and then release its resources
 func (g *generator) Stop() {
 	if g.publishers != nil {
 		g.publishers.Stop() // Resources will be released after all publishers have finished
-		g.cancel()          // force stop generator
+		g.cancel()          // Force stop the generator
 	} else {
 		g.release()
 	}
 }
 
-// release stops the topic and close the Cloud Pub/Sub client
+// Stops the topic and then close the Cloud Pub/Sub client
 func (g *generator) release() {
 	g.topic.Stop()
 	if err := g.client.Close(); err != nil {
@@ -91,10 +91,10 @@ func (g *generator) release() {
 	}
 }
 
-var mux sync.Mutex     // Protect running singleon
-var running *generator // Singleton, only one generator at the same time.
+var mux sync.Mutex     // Protects the running singleon
+var running *generator // This is a singleton. Only one generator can be running at a time
 
-// Start generates event and publish to event Topic
+// Generates and publishes an event to a Cloud Pub/Sub topic
 func Start(event publishers.NewMessage, numPublishers int, timeout time.Duration) error {
 	mux.Lock()
 	defer mux.Unlock()
@@ -111,7 +111,7 @@ func Start(event publishers.NewMessage, numPublishers int, timeout time.Duration
 	return nil
 }
 
-// Stop stops the event generating
+// Stops the event generation
 func Stop() {
 	mux.Lock()
 	defer mux.Unlock()

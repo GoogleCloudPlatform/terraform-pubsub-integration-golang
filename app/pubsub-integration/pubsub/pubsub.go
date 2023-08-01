@@ -34,7 +34,7 @@ type service interface {
 	NewClient(context.Context, *pubsub.ClientConfig) (Client, error)
 }
 
-// Service used to creates client for bucket handling.
+// Service will be used to create clients for bucket handling.
 var Service service = new(pubsubService)
 
 type pubsubService struct {
@@ -87,7 +87,7 @@ type pubsubClient struct {
 	client *pubsub.Client
 }
 
-// NewTopic get the topic for publishing message. Using the default value if batchSize, numGoroutines, maxOutstanding <= 0
+// NewTopic retrieves the topic for publishing message. Using the default value if batchSize, numGoroutines, maxOutstanding <= 0
 func (c *pubsubClient) NewTopic(topicID string, codec *goavro.Codec, batchSize int, numGoroutines int, maxOutstanding int) Topic {
 	topic := c.client.Topic(topicID)
 
@@ -108,7 +108,7 @@ func (c *pubsubClient) NewTopic(topicID string, codec *goavro.Codec, batchSize i
 	}
 }
 
-// NewSubscription gets the subscription for receiving message. Using the default value if maxOutstanding, numGoroutines <= 0
+// NewSubscription retrieves the subscription for receiving message. Using the default value if maxOutstanding, numGoroutines <= 0
 func (c *pubsubClient) NewSubscription(ID string, codec *goavro.Codec, numGoroutines int, maxOutstanding int) *Subscription {
 	sub := c.client.Subscription(ID)
 
@@ -125,7 +125,7 @@ func (c *pubsubClient) NewSubscription(ID string, codec *goavro.Codec, numGorout
 	}
 }
 
-// Close close the underlying client.
+// Closes the underlying client.
 func (c *pubsubClient) Close() error {
 	log.Printf("close client: %v", c.client)
 	return c.client.Close()
@@ -186,7 +186,7 @@ type Subscription struct {
 	codec        *goavro.Codec
 }
 
-// MessageHandler is function to handle the received message
+// MessageHandler is the function to handle the received message
 type MessageHandler func(context.Context, *Message)
 
 // Message contains the message content decoded by avro schema

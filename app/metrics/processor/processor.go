@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-// Start starts to receive event and generate metrics
+// Creates a Cloud Pub/Sub subscription to receive event and then generate metrics
 func Start(ctx context.Context, factory metrics.Factory) error {
 	client, err := pubsub.Service.NewClient(ctx, nil)
 	if err != nil {
