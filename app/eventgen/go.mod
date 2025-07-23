@@ -4,9 +4,9 @@ go 1.20
 
 require (
 	github.com/gin-gonic/gin v1.9.0
-	github.com/google/uuid v1.3.0
-	github.com/linkedin/goavro/v2 v2.12.0
-	github.com/stretchr/testify v1.8.1
+	github.com/google/uuid v1.6.0
+	github.com/linkedin/goavro/v2 v2.14.0
+	github.com/stretchr/testify v1.10.0
 )
 
 require (

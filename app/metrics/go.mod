@@ -3,8 +3,8 @@ module google/jss/pubsub-integration/metrics
 go 1.20
 
 require (
-	github.com/linkedin/goavro/v2 v2.12.0
-	github.com/stretchr/testify v1.8.1
+	github.com/linkedin/goavro/v2 v2.14.0
+	github.com/stretchr/testify v1.10.0
 )
 
 require (
