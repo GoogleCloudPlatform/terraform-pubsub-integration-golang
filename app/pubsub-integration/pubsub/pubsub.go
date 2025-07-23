@@ -23,8 +23,8 @@ import (
 	"log"
 	"time"
 
-	"cloud.google.com/go/pubsub"
-	vkit "cloud.google.com/go/pubsub/apiv1"
+	"cloud.google.com/go/pubsub/v2"
+	vkit "cloud.google.com/go/pubsub/v2/apiv1"
 	"github.com/googleapis/gax-go/v2"
 	"github.com/linkedin/goavro/v2"
 	"google.golang.org/grpc/codes"

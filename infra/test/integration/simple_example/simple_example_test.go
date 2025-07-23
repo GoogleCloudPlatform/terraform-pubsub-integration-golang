@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/bigquery"
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/v2"
 	"context"
 	"flag"
 	"github.com/GoogleCloudPlatform/cloud-foundation-toolkit/infra/blueprint-test/pkg/gcloud"
