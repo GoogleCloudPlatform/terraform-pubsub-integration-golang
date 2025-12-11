@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/bigquery v1.51.2
 	cloud.google.com/go/pubsub v1.30.1
 	github.com/GoogleCloudPlatform/cloud-foundation-toolkit/infra/blueprint-test v0.4.1
-	github.com/parnurzeal/gorequest v0.2.16
+	github.com/parnurzeal/gorequest v0.2.17
 	github.com/stretchr/testify v1.8.1
 	google.golang.org/api v0.118.0
 	k8s.io/api v0.26.0
